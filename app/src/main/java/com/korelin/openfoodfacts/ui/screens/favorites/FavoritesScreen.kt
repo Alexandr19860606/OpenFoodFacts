@@ -3,11 +3,17 @@ package com.korelin.openfoodfacts.ui.screens.favorites
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.StarBorder
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.korelin.openfoodfacts.ui.theme.CustomShapes
+import com.korelin.openfoodfacts.ui.theme.Theme
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -15,6 +21,15 @@ fun FavoritesScreen(
     onBackPressed: () -> Unit,
     onProductClick: (String) -> Unit
 ) {
+    // Заглушка для демонстрации
+    val favorites = remember {
+        listOf(
+            Triple("3017620422003", "Nutella", "Ferrero"),
+            Triple("5449000000996", "Coca-Cola Zero", "Coca-Cola"),
+            Triple("8000500310427", "Pizza Margherita", "Dr. Oetker")
+        )
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -22,7 +37,7 @@ fun FavoritesScreen(
                 navigationIcon = {
                     IconButton(onClick = onBackPressed) {
                         Icon(
-                            androidx.compose.ui.res.painterResource(android.R.drawable.ic_menu_close_clear_cancel),
+                            Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = "Назад"
                         )
                     }
@@ -30,7 +45,7 @@ fun FavoritesScreen(
             )
         }
     ) { paddingValues ->
-        if (true) { // Проверка на пустое избранное
+        if (favorites.isNotEmpty()) {
             LazyColumn(
                 modifier = Modifier
                     .fillMaxSize()
@@ -38,12 +53,13 @@ fun FavoritesScreen(
                 contentPadding = PaddingValues(16.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                items(5) { index ->
+                items(favorites) { (barcode, name, brand) ->
                     FavoriteItem(
-                        name = "Продукт ${index + 1}",
-                        brand = "Бренд ${index + 1}",
-                        barcode = "1234567890123",
-                        onClick = { onProductClick("1234567890123") }
+                        name = name,
+                        brand = brand,
+                        onClick = {
+                            onProductClick(barcode)
+                        }
                     )
                 }
             }
@@ -59,17 +75,12 @@ fun FavoritesScreen(
                 ) {
                     Text(
                         text = "⭐",
-                        style = MaterialTheme.typography.displayLarge
+                        style = Theme.typography.displayLarge
                     )
                     Spacer(modifier = Modifier.height(16.dp))
                     Text(
                         text = "Нет избранных продуктов",
-                        style = MaterialTheme.typography.bodyLarge
-                    )
-                    Text(
-                        text = "Добавляйте продукты в избранное из карточки товара",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        style = Theme.typography.bodyLarge
                     )
                 }
             }
@@ -81,15 +92,14 @@ fun FavoritesScreen(
 fun FavoriteItem(
     name: String,
     brand: String,
-    barcode: String,
     onClick: () -> Unit
 ) {
     Card(
         onClick = onClick,
         modifier = Modifier.fillMaxWidth(),
-        shape = MaterialTheme.shapes.medium,
+        shape = CustomShapes.medium,
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.secondaryContainer
+            containerColor = Theme.colors.secondaryContainer
         )
     ) {
         Row(
@@ -103,33 +113,34 @@ fun FavoriteItem(
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Box(
+                Surface(
                     modifier = Modifier.size(40.dp),
-                    contentAlignment = Alignment.Center
+                    shape = CustomShapes.small,
+                    color = Theme.colors.primaryContainer
                 ) {
-                    Text("🥫", style = MaterialTheme.typography.headlineSmall)
+                    Box(contentAlignment = Alignment.Center) {
+                        Text("🥫", style = Theme.typography.titleLarge)
+                    }
                 }
 
                 Column {
                     Text(
                         text = name,
-                        style = MaterialTheme.typography.bodyLarge
+                        style = Theme.typography.bodyLarge
                     )
                     Text(
                         text = brand,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSecondaryContainer
+                        style = Theme.typography.bodySmall,
+                        color = Theme.colors.onSecondaryContainer
                     )
                 }
             }
 
-            IconButton(onClick = { /* Удалить из избранного */ }) {
-                Icon(
-                    androidx.compose.ui.res.painterResource(android.R.drawable.btn_star_big_on),
-                    contentDescription = "Удалить из избранного",
-                    tint = MaterialTheme.colorScheme.primary
-                )
-            }
+            Icon(
+                Icons.Default.Star,
+                contentDescription = "В избранном",
+                tint = Theme.colors.primary
+            )
         }
     }
 }

@@ -8,6 +8,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.korelin.openfoodfacts.ui.theme.Theme
 
+
 @Composable
 fun LoadingIndicator(
     modifier: Modifier = Modifier
@@ -57,13 +58,10 @@ fun LinearProgressIndicator(
     modifier: Modifier = Modifier
 ) {
 
-    androidx.compose.material3.LinearProgressIndicator(
-        progress = progress,
-        modifier = modifier
-            .fillMaxWidth()
-            .height(8.dp),
+    LinearProgressIndicator(
+        progress = { progress },
+        modifier = modifier.fillMaxWidth().height(8.dp),
         color = Theme.colors.primary,
         trackColor = Theme.colors.primary.copy(alpha = 0.2f)
-
     )
 }

@@ -2,6 +2,8 @@ package com.korelin.openfoodfacts.ui.theme
 
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ListAlt
+import androidx.compose.material.icons.automirrored.outlined.ListAlt
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -13,10 +15,8 @@ object AppIcons {
     val Scanner = Icons.Filled.QrCodeScanner
     val ScannerOutlined = Icons.Outlined.QrCodeScanner
 
-
     val History = Icons.Filled.Schedule
     val HistoryOutlined = Icons.Outlined.Schedule
-
 
     val Favorites = Icons.Filled.Star
     val FavoritesOutlined = Icons.Outlined.Star
@@ -74,8 +74,9 @@ object AppIcons {
     val Barcode = Icons.Filled.QrCode
     val BarcodeOutlined = Icons.Outlined.QrCode
 
-    val Ingredients = Icons.Filled.ListAlt
-    val IngredientsOutlined = Icons.Outlined.ListAlt
+    // ИСПРАВЛЕНО: используем AutoMirrored версии
+    val Ingredients = Icons.AutoMirrored.Filled.ListAlt
+    val IngredientsOutlined = Icons.AutoMirrored.Outlined.ListAlt
 
     val Nutrition = Icons.Filled.FoodBank
     val NutritionOutlined = Icons.Outlined.FoodBank

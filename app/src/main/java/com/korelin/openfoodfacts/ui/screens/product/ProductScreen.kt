@@ -3,12 +3,17 @@ package com.korelin.openfoodfacts.ui.screens.product
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.StarBorder
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.delay
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -23,7 +28,7 @@ fun ProductScreen(
     // Заглушка для демонстрации
     LaunchedEffect(barcode) {
         // Имитация загрузки
-        kotlinx.coroutines.delay(1000)
+        delay(1000)
         isLoading = false
     }
 
@@ -39,19 +44,18 @@ fun ProductScreen(
                 },
                 navigationIcon = {
                     IconButton(onClick = onBackPressed) {
+
                         Icon(
-                            androidx.compose.ui.res.painterResource(android.R.drawable.ic_menu_close_clear_cancel),
+                            Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = "Назад"
                         )
                     }
                 },
                 actions = {
                     IconButton(onClick = { isFavorite = !isFavorite }) {
+
                         Icon(
-                            androidx.compose.ui.res.painterResource(
-                                if (isFavorite) android.R.drawable.btn_star_big_on
-                                else android.R.drawable.btn_star
-                            ),
+                            if (isFavorite) Icons.Default.Star else Icons.Default.StarBorder,
                             contentDescription = if (isFavorite) "Удалить из избранного" else "Добавить в избранное"
                         )
                     }
