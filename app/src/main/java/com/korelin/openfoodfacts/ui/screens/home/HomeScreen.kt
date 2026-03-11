@@ -27,14 +27,13 @@ fun HomeScreen(
     navController: NavController,
     viewModel: HomeViewModel = viewModel()
 ) {
-    val homeState by viewModel.homeState.collectAsState()
+    val homeState: HomeDataState by viewModel.homeState.collectAsState()
     var showTimeout by remember { mutableStateOf(false) }
 
     FileLogger.d("HomeScreen", "HomeScreen загружен, state: $homeState")
 
-    // Таймаут для загрузки - если через 10 секунд всё ещё Loading, показываем ошибку
     LaunchedEffect(Unit) {
-        delay(10000) // 10 секунд
+        delay(10000)
         if (homeState is HomeDataState.Loading) {
             FileLogger.e("HomeScreen", "Таймаут загрузки - 10 секунд")
             showTimeout = true
@@ -94,7 +93,6 @@ fun HomeScreen(
                     FileLogger.d("HomeScreen", "Успешно загружено: популярных=${state.popular.size}, новинок=${state.new.size}")
 
                     if (state.popular.isEmpty() && state.new.isEmpty()) {
-                        // Если данные пустые, показываем сообщение
                         Column(
                             modifier = Modifier.fillMaxSize(),
                             horizontalAlignment = Alignment.CenterHorizontally,
@@ -139,7 +137,7 @@ fun HomeScreen(
 
                             if (state.new.isNotEmpty()) {
                                 item {
-                                    NewSection(
+                                    NewSection(  // ← Используем NewSection, а не NewSectionItem
                                         products = state.new,
                                         onProductClick = { product ->
                                             FileLogger.d("HomeScreen", "Клик по новинке: ${product.product_name}")

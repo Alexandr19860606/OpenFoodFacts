@@ -8,6 +8,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.korelin.openfoodfacts.ui.theme.Theme
 
+
 @Composable
 fun LoadingIndicator(
     modifier: Modifier = Modifier
