@@ -172,10 +172,8 @@ fun NutritionBar(
         Spacer(modifier = Modifier.height(4.dp))
 
         LinearProgressIndicator(
-            progress = percentage,
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(8.dp),
+            progress = { percentage },
+            modifier = Modifier.fillMaxWidth().height(8.dp),
             color = color,
             trackColor = color.copy(alpha = 0.2f)
         )

@@ -57,13 +57,10 @@ fun LinearProgressIndicator(
     modifier: Modifier = Modifier
 ) {
 
-    androidx.compose.material3.LinearProgressIndicator(
-        progress = progress,
-        modifier = modifier
-            .fillMaxWidth()
-            .height(8.dp),
+    LinearProgressIndicator(
+        progress = { progress },
+        modifier = modifier.fillMaxWidth().height(8.dp),
         color = Theme.colors.primary,
         trackColor = Theme.colors.primary.copy(alpha = 0.2f)
-
     )
 }
