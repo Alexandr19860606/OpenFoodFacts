@@ -115,6 +115,23 @@ dependencies {
     androidTestImplementation("androidx.test.espresso:espresso-core:3.5.1")
 
     implementation("androidx.appcompat:appcompat:1.6.1")
+
+    // Coordinator Layout
+    implementation("androidx.coordinatorlayout:coordinatorlayout:1.2.0")
+
+    // MotionLayout (для сложных анимаций)
+    implementation("androidx.constraintlayout:constraintlayout-compose:1.0.1")
+
+    // Для работы с изображениями и скачиванием
+    implementation("androidx.core:core-ktx:1.12.0")
+
+    // Для добавления в календарь
+    implementation("androidx.activity:activity-ktx:1.8.2")
+
+    // Для работы с разрешениями
+    implementation("com.google.accompanist:accompanist-permissions:0.34.0")
+
+    implementation("io.coil-kt:coil-compose:2.5.0")
 }
 
 // Добавляем для Hilt
