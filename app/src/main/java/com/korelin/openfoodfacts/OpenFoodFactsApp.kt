@@ -3,9 +3,9 @@ package com.korelin.openfoodfacts
 import android.app.Application
 import android.util.Log
 import com.korelin.openfoodfacts.data.api.RetrofitClient
+import dagger.hilt.android.HiltAndroidApp
 
-private const val TAG = "OpenFoodFactsApp"
-
+@HiltAndroidApp
 class OpenFoodFactsApp : Application() {
 
     override fun onCreate() {
@@ -13,12 +13,15 @@ class OpenFoodFactsApp : Application() {
 
         Log.d(TAG, "🚀 Приложение запущено")
 
-        // Тест Retrofit
         try {
             RetrofitClient.testConnection()
             Log.d(TAG, "✅ RetrofitClient работает")
         } catch (e: Exception) {
             Log.e(TAG, "❌ Ошибка RetrofitClient", e)
         }
+    }
+
+    companion object {
+        private const val TAG = "OpenFoodFactsApp"
     }
 }

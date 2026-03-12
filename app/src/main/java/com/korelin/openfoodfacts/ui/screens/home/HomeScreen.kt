@@ -3,6 +3,8 @@ package com.korelin.openfoodfacts.ui.screens.home
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -20,22 +22,21 @@ import com.korelin.openfoodfacts.ui.screens.home.components.PopularSection
 import com.korelin.openfoodfacts.ui.theme.Theme
 import com.korelin.openfoodfacts.utils.FileLogger
 import kotlinx.coroutines.delay
+import androidx.hilt.navigation.compose.hiltViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
     navController: NavController,
-    viewModel: HomeViewModel = viewModel()
+    viewModel: HomeViewModel = hiltViewModel()
 ) {
     val homeState: HomeDataState by viewModel.homeState.collectAsState()
+    val favoritesMap by viewModel.favoritesMap.collectAsState()
     var showTimeout by remember { mutableStateOf(false) }
-
-    FileLogger.d("HomeScreen", "HomeScreen загружен, state: $homeState")
 
     LaunchedEffect(Unit) {
         delay(10000)
         if (homeState is HomeDataState.Loading) {
-            FileLogger.e("HomeScreen", "Таймаут загрузки - 10 секунд")
             showTimeout = true
         }
     }
@@ -47,7 +48,6 @@ fun HomeScreen(
                 actions = {
                     IconButton(
                         onClick = {
-                            FileLogger.d("HomeScreen", "Нажата кнопка поиска")
                             navController.navigate("search")
                         }
                     ) {
@@ -68,7 +68,6 @@ fun HomeScreen(
         ) {
             when {
                 showTimeout -> {
-                    FileLogger.e("HomeScreen", "Показываем ошибку таймаута")
                     ErrorView(
                         message = "Таймаут загрузки. Проверьте интернет.",
                         onRetry = {
@@ -78,11 +77,9 @@ fun HomeScreen(
                     )
                 }
                 homeState is HomeDataState.Loading -> {
-                    FileLogger.d("HomeScreen", "Показываем загрузку")
                     LoadingIndicator()
                 }
                 homeState is HomeDataState.Error -> {
-                    FileLogger.e("HomeScreen", "Ошибка: ${(homeState as HomeDataState.Error).message}")
                     ErrorView(
                         message = (homeState as HomeDataState.Error).message,
                         onRetry = { viewModel.refresh() }
@@ -90,7 +87,6 @@ fun HomeScreen(
                 }
                 homeState is HomeDataState.Success -> {
                     val state = homeState as HomeDataState.Success
-                    FileLogger.d("HomeScreen", "Успешно загружено: популярных=${state.popular.size}, новинок=${state.new.size}")
 
                     if (state.popular.isEmpty() && state.new.isEmpty()) {
                         Column(
@@ -118,17 +114,23 @@ fun HomeScreen(
                             contentPadding = PaddingValues(vertical = 16.dp),
                             verticalArrangement = Arrangement.spacedBy(24.dp)
                         ) {
+                            // В HomeScreen.kt, внутри LazyColumn:
+
                             if (state.popular.isNotEmpty()) {
                                 item {
                                     PopularSection(
                                         products = state.popular,
+                                        favoritesMap = favoritesMap,
                                         onProductClick = { product ->
-                                            FileLogger.d("HomeScreen", "Клик по популярному продукту: ${product.product_name}")
-                                            val barcodeValue = product.code
-                                            if (barcodeValue != null) {
-                                                navController.navigate("product/$barcodeValue")
+                                            product.code?.let { barcode ->
+                                                navController.navigate("product/$barcode")
+                                            }
+                                        },
+                                        onFavoriteToggle = { product, isFavorite ->
+                                            if (isFavorite) {
+                                                product.code?.let { viewModel.addToFavorites(product) }
                                             } else {
-                                                FileLogger.e("HomeScreen", "Barcode не найден для продукта")
+                                                product.code?.let { viewModel.removeFromFavorites(it) }
                                             }
                                         }
                                     )
@@ -137,15 +139,40 @@ fun HomeScreen(
 
                             if (state.new.isNotEmpty()) {
                                 item {
-                                    NewSection(  // ← Используем NewSection, а не NewSectionItem
+                                    NewSection(
                                         products = state.new,
+                                        favoritesMap = favoritesMap,
                                         onProductClick = { product ->
-                                            FileLogger.d("HomeScreen", "Клик по новинке: ${product.product_name}")
-                                            val barcodeValue = product.code
-                                            if (barcodeValue != null) {
-                                                navController.navigate("product/$barcodeValue")
+                                            product.code?.let { barcode ->
+                                                navController.navigate("product/$barcode")
+                                            }
+                                        },
+                                        onFavoriteToggle = { product, isFavorite ->
+                                            if (isFavorite) {
+                                                product.code?.let { viewModel.addToFavorites(product) }
                                             } else {
-                                                FileLogger.e("HomeScreen", "Barcode не найден для продукта")
+                                                product.code?.let { viewModel.removeFromFavorites(it) }
+                                            }
+                                        }
+                                    )
+                                }
+                            }
+
+                            if (state.new.isNotEmpty()) {
+                                item {
+                                    NewSection(
+                                        products = state.new,
+                                        favoritesMap = favoritesMap,
+                                        onProductClick = { product ->
+                                            product.code?.let { barcode ->
+                                                navController.navigate("product/$barcode")
+                                            }
+                                        },
+                                        onFavoriteToggle = { product, isFavorite ->
+                                            if (isFavorite) {
+                                                product.code?.let { viewModel.addToFavorites(product) }
+                                            } else {
+                                                product.code?.let { viewModel.removeFromFavorites(it) }
                                             }
                                         }
                                     )
@@ -155,7 +182,6 @@ fun HomeScreen(
                             item {
                                 CategorySection(
                                     onCategoryClick = { category ->
-                                        FileLogger.d("HomeScreen", "Клик по категории: $category")
                                         navController.navigate("search/$category")
                                     }
                                 )

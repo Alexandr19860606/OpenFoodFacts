@@ -5,30 +5,30 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Star
-import androidx.compose.material.icons.filled.StarBorder
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import com.korelin.openfoodfacts.ui.theme.CustomShapes
+import androidx.hilt.navigation.compose.hiltViewModel
+import com.korelin.openfoodfacts.data.model.ProductInfo
+import com.korelin.openfoodfacts.ui.components.LoadingIndicator
 import com.korelin.openfoodfacts.ui.theme.Theme
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun FavoritesScreen(
     onBackPressed: () -> Unit,
-    onProductClick: (String) -> Unit
+    onProductClick: (String) -> Unit,
+    viewModel: FavoritesViewModel = hiltViewModel()
 ) {
-    // Заглушка для демонстрации
-    val favorites = remember {
-        listOf(
-            Triple("3017620422003", "Nutella", "Ferrero"),
-            Triple("5449000000996", "Coca-Cola Zero", "Coca-Cola"),
-            Triple("8000500310427", "Pizza Margherita", "Dr. Oetker")
-        )
-    }
+    val favorites by viewModel.favorites.collectAsState()
+    val history by viewModel.history.collectAsState()
+    val isLoading by viewModel.isLoading.collectAsState()
+    val showHistory by viewModel.showHistory.collectAsState()
+
+    var showClearHistoryDialog by remember { mutableStateOf(false) }
 
     Scaffold(
         topBar = {
@@ -41,48 +41,137 @@ fun FavoritesScreen(
                             contentDescription = "Назад"
                         )
                     }
+                },
+                actions = {
+                    // Кнопка для открытия истории
+                    Box(modifier = Modifier.padding(end = 8.dp)) {
+                        IconButton(
+                            onClick = { viewModel.toggleHistorySheet() }
+                        ) {
+                            Icon(
+                                Icons.Default.History,
+                                contentDescription = "История"
+                            )
+                        }
+
+                        // Бейдж с количеством элементов в истории
+                        if (history.isNotEmpty()) {
+                            Badge(
+                                modifier = Modifier
+                                    .align(Alignment.TopEnd)
+                                    .offset(x = 8.dp, y = 8.dp),
+                                containerColor = Theme.colors.primary
+                            ) {
+                                Text(
+                                    text = history.size.toString(),
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = Theme.colors.onPrimary
+                                )
+                            }
+                        }
+                    }
                 }
             )
         }
     ) { paddingValues ->
-        if (favorites.isNotEmpty()) {
-            LazyColumn(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(paddingValues),
-                contentPadding = PaddingValues(16.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                items(favorites) { (barcode, name, brand) ->
-                    FavoriteItem(
-                        name = name,
-                        brand = brand,
-                        onClick = {
-                            onProductClick(barcode)
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues)
+        ) {
+            if (isLoading && favorites.isEmpty()) {
+                LoadingIndicator()
+            } else {
+                if (favorites.isEmpty()) {
+                    // Пустое состояние
+                    Column(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(16.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Center
+                    ) {
+                        Icon(
+                            Icons.Default.StarBorder,
+                            contentDescription = null,
+                            modifier = Modifier.size(64.dp),
+                            tint = Theme.colors.primary.copy(alpha = 0.5f)
+                        )
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Text(
+                            text = "Нет избранных продуктов",
+                            style = Theme.typography.bodyLarge
+                        )
+                        Text(
+                            text = "Добавляйте продукты в избранное, чтобы они появлялись здесь",
+                            style = Theme.typography.bodyMedium,
+                            color = Theme.colors.onSurfaceVariant
+                        )
+                    }
+                } else {
+                    // Список избранного
+                    LazyColumn(
+                        modifier = Modifier.fillMaxSize(),
+                        contentPadding = PaddingValues(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        items(
+                            items = favorites,
+                            key = { it.code ?: it.product_name ?: "" }
+                        ) { product ->
+                            FavoriteItem(
+                                product = product,
+                                onRemove = {
+                                    product.code?.let { code ->
+                                        viewModel.removeFromFavorites(code)
+                                    }
+                                },
+                                onClick = {
+                                    product.code?.let { onProductClick(it) }
+                                }
+                            )
                         }
-                    )
+                    }
                 }
             }
-        } else {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(paddingValues),
-                contentAlignment = Alignment.Center
-            ) {
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    Text(
-                        text = "⭐",
-                        style = Theme.typography.displayLarge
-                    )
-                    Spacer(modifier = Modifier.height(16.dp))
-                    Text(
-                        text = "Нет избранных продуктов",
-                        style = Theme.typography.bodyLarge
-                    )
-                }
+
+            // Bottom Sheet с историей
+            if (showHistory) {
+                HistoryBottomSheet(
+                    history = history,
+                    onDismiss = { viewModel.toggleHistorySheet() },
+                    onProductClick = onProductClick,
+                    onRemoveFromHistory = { productCode ->
+                        viewModel.removeFromHistory(productCode)
+                    },
+                    onClearHistory = {
+                        showClearHistoryDialog = true
+                    }
+                )
+            }
+
+            // Диалог подтверждения очистки истории
+            if (showClearHistoryDialog) {
+                AlertDialog(
+                    onDismissRequest = { showClearHistoryDialog = false },
+                    title = { Text("Очистить историю") },
+                    text = { Text("Вы уверены, что хотите очистить всю историю просмотров?") },
+                    confirmButton = {
+                        TextButton(
+                            onClick = {
+                                viewModel.clearHistory()
+                                showClearHistoryDialog = false
+                            }
+                        ) {
+                            Text("Очистить", color = Theme.colors.error)
+                        }
+                    },
+                    dismissButton = {
+                        TextButton(onClick = { showClearHistoryDialog = false }) {
+                            Text("Отмена")
+                        }
+                    }
+                )
             }
         }
     }
@@ -90,14 +179,166 @@ fun FavoritesScreen(
 
 @Composable
 fun FavoriteItem(
-    name: String,
-    brand: String,
+    product: ProductInfo,
+    onRemove: () -> Unit,
     onClick: () -> Unit
 ) {
     Card(
         onClick = onClick,
         modifier = Modifier.fillMaxWidth(),
-        shape = CustomShapes.medium,
+        shape = Theme.shapes.medium,
+        colors = CardDefaults.cardColors(
+            containerColor = Theme.colors.surface
+        )
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            // Миниатюра
+            Surface(
+                modifier = Modifier.size(56.dp),
+                shape = Theme.shapes.small,
+                color = Theme.colors.primaryContainer
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    if (!product.image_url.isNullOrEmpty()) {
+                        // Здесь будет AsyncImage
+                        Text("🥫", style = Theme.typography.titleLarge)
+                    } else {
+                        Text("🥫", style = Theme.typography.titleLarge)
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.width(12.dp))
+
+            // Информация о продукте
+            Column(
+                modifier = Modifier.weight(1f)
+            ) {
+                Text(
+                    text = product.product_name ?: "Без названия",
+                    style = Theme.typography.bodyLarge,
+                    maxLines = 1
+                )
+                Text(
+                    text = product.brands ?: "Неизвестный бренд",
+                    style = Theme.typography.bodySmall,
+                    color = Theme.colors.onSurfaceVariant,
+                    maxLines = 1
+                )
+            }
+
+            // Кнопка удаления
+            IconButton(onClick = onRemove) {
+                Icon(
+                    Icons.Default.Delete,
+                    contentDescription = "Удалить из избранного",
+                    tint = Theme.colors.error
+                )
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun HistoryBottomSheet(
+    history: List<ProductInfo>,
+    onDismiss: () -> Unit,
+    onProductClick: (String) -> Unit,
+    onRemoveFromHistory: (String) -> Unit,
+    onClearHistory: () -> Unit
+) {
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        shape = Theme.shapes.large,
+        containerColor = Theme.colors.surface
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp)
+        ) {
+            // Заголовок
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "История просмотров",
+                    style = Theme.typography.titleLarge
+                )
+
+                if (history.isNotEmpty()) {
+                    TextButton(
+                        onClick = onClearHistory,
+                        colors = ButtonDefaults.textButtonColors(
+                            contentColor = Theme.colors.error
+                        )
+                    ) {
+                        Text("Очистить всё")
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            if (history.isEmpty()) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(32.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "История просмотров пуста",
+                        style = Theme.typography.bodyMedium,
+                        color = Theme.colors.onSurfaceVariant
+                    )
+                }
+            } else {
+                // Список истории
+                LazyColumn(
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    items(
+                        items = history,
+                        key = { it.code ?: it.product_name ?: "" }
+                    ) { product ->
+                        HistoryItem(
+                            product = product,
+                            onClick = {
+                                product.code?.let { onProductClick(it) }
+                                onDismiss()
+                            },
+                            onRemove = {
+                                product.code?.let { onRemoveFromHistory(it) }
+                            }
+                        )
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+        }
+    }
+}
+
+@Composable
+fun HistoryItem(
+    product: ProductInfo,
+    onClick: () -> Unit,
+    onRemove: () -> Unit
+) {
+    Card(
+        onClick = onClick,
+        modifier = Modifier.fillMaxWidth(),
+        shape = Theme.shapes.small,
         colors = CardDefaults.cardColors(
             containerColor = Theme.colors.secondaryContainer
         )
@@ -105,42 +346,47 @@ fun FavoriteItem(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
+                .padding(12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                verticalAlignment = Alignment.CenterVertically
+            // Миниатюра
+            Surface(
+                modifier = Modifier.size(40.dp),
+                shape = Theme.shapes.small,
+                color = Theme.colors.primaryContainer
             ) {
-                Surface(
-                    modifier = Modifier.size(40.dp),
-                    shape = CustomShapes.small,
-                    color = Theme.colors.primaryContainer
-                ) {
-                    Box(contentAlignment = Alignment.Center) {
-                        Text("🥫", style = Theme.typography.titleLarge)
-                    }
-                }
-
-                Column {
-                    Text(
-                        text = name,
-                        style = Theme.typography.bodyLarge
-                    )
-                    Text(
-                        text = brand,
-                        style = Theme.typography.bodySmall,
-                        color = Theme.colors.onSecondaryContainer
-                    )
+                Box(contentAlignment = Alignment.Center) {
+                    Text("🥫", style = Theme.typography.titleMedium)
                 }
             }
 
-            Icon(
-                Icons.Default.Star,
-                contentDescription = "В избранном",
-                tint = Theme.colors.primary
-            )
+            Spacer(modifier = Modifier.width(12.dp))
+
+            // Информация
+            Column(
+                modifier = Modifier.weight(1f)
+            ) {
+                Text(
+                    text = product.product_name ?: "Без названия",
+                    style = Theme.typography.bodyMedium,
+                    maxLines = 1
+                )
+                Text(
+                    text = product.brands ?: "Неизвестный бренд",
+                    style = Theme.typography.bodySmall,
+                    color = Theme.colors.onSurfaceVariant,
+                    maxLines = 1
+                )
+            }
+
+            // Кнопка удалить из истории
+            IconButton(onClick = onRemove) {
+                Icon(
+                    Icons.Default.Close,
+                    contentDescription = "Удалить из истории",
+                    tint = Theme.colors.onSurfaceVariant
+                )
+            }
         }
     }
 }

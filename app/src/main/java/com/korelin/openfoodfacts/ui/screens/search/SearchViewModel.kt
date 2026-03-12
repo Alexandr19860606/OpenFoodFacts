@@ -4,14 +4,17 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.korelin.openfoodfacts.data.model.ProductInfo
 import com.korelin.openfoodfacts.data.repository.ProductRepository
+import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import javax.inject.Inject
 
-class SearchViewModel : ViewModel() {
-
-    private val repository = ProductRepository()
+@HiltViewModel
+class SearchViewModel @Inject constructor(
+    private val repository: ProductRepository
+) : ViewModel() {
 
     // Состояние результатов
     private val _searchResults = MutableStateFlow<List<ProductInfo>>(emptyList())
@@ -80,6 +83,7 @@ class SearchViewModel : ViewModel() {
                 if (reset) {
                     _searchResults.value = newProducts
                 } else {
+                    // Правильное объединение списков
                     _searchResults.value = _searchResults.value + newProducts
                 }
 

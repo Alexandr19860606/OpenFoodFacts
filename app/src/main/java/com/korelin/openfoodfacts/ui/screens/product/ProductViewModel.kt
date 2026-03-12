@@ -5,12 +5,15 @@ import androidx.lifecycle.viewModelScope
 import com.korelin.openfoodfacts.data.local.repository.LocalRepository
 import com.korelin.openfoodfacts.data.model.ProductInfo
 import com.korelin.openfoodfacts.data.repository.ProductRepository
+import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import javax.inject.Inject
 
-class ProductViewModel(
+@HiltViewModel
+class ProductViewModel @Inject constructor(
     private val repository: ProductRepository,
     private val localRepository: LocalRepository
 ) : ViewModel() {
@@ -39,21 +42,21 @@ class ProductViewModel(
             _error.value = null
 
             try {
-                // 1. Пробуем загрузить из локального кэша
+                // 1. Проверяем, в избранном ли продукт
+                _isFavorite.value = localRepository.isProductInFavorites(barcode)
+
+                // 2. Пробуем загрузить из локального кэша
                 val cachedProduct = localRepository.getProduct(barcode)
 
                 if (cachedProduct != null && !forceRefresh) {
                     _product.value = cachedProduct
                     _isLoading.value = false
 
-                    // Проверяем, в избранном ли продукт
-                    _isFavorite.value = localRepository.isProductInFavorites(barcode)
-
                     // Добавляем в историю просмотров
-                    localRepository.addToHistory(barcode)
+                    localRepository.addToHistory(cachedProduct)
                 }
 
-                // 2. Загружаем свежие данные из API
+                // 3. Загружаем свежие данные из API
                 val response = repository.getProductByBarcode(barcode)
 
                 response.product?.let { freshProduct ->
@@ -63,9 +66,9 @@ class ProductViewModel(
                     localRepository.saveProduct(freshProduct)
 
                     // Добавляем в историю просмотров
-                    localRepository.addToHistory(barcode)
+                    localRepository.addToHistory(freshProduct)
 
-                    // Проверяем, в избранном ли продукт
+                    // Обновляем статус избранного
                     _isFavorite.value = localRepository.isProductInFavorites(barcode)
                 }
 
@@ -84,19 +87,15 @@ class ProductViewModel(
 
     fun toggleFavorite() {
         viewModelScope.launch {
-            val barcode = currentBarcode ?: return@launch
+            val product = _product.value ?: return@launch
+            val barcode = product.code ?: return@launch
 
             if (_isFavorite.value) {
                 localRepository.removeFromFavorites(barcode)
                 _isFavorite.value = false
             } else {
-                localRepository.addToFavorites(barcode)
+                localRepository.addToFavorites(product)
                 _isFavorite.value = true
-
-                // Если продукт еще не сохранен, сохраняем его
-                if (_product.value != null) {
-                    localRepository.saveProduct(_product.value!!)
-                }
             }
         }
     }

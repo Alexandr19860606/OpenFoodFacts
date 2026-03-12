@@ -22,7 +22,9 @@ import com.korelin.openfoodfacts.ui.screens.search.SearchScreen
 import com.korelin.openfoodfacts.ui.screens.settings.SettingsScreen
 import com.korelin.openfoodfacts.ui.theme.OpenFoodFactsTheme
 import com.korelin.openfoodfacts.utils.FileLogger
+import dagger.hilt.android.AndroidEntryPoint
 
+@AndroidEntryPoint
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -99,7 +101,7 @@ fun AppNavigation() {
                 )
             }
 
-            // ПОИСК - ИСПРАВЛЕНО: добавлен composable для search без параметра
+            // Поиск (без параметра)
             composable("search") {
                 FileLogger.d("Nav", "Открыт экран Search")
                 SearchScreen(
@@ -121,7 +123,7 @@ fun AppNavigation() {
                 )
             }
 
-            // ПОИСК с параметром (опционально)
+            // Поиск с параметром
             composable("search/{query}") { backStackEntry ->
                 val query = backStackEntry.arguments?.getString("query") ?: ""
                 FileLogger.d("Nav", "Открыт экран Search с query: $query")

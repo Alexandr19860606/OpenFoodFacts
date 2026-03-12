@@ -8,5 +8,8 @@ data class HistoryEntity(
     @PrimaryKey(autoGenerate = true)
     val id: Long = 0,
     val productCode: String,
+    val productName: String?,
+    val brand: String?,
+    val imageUrl: String?,
     val viewedAt: Long = System.currentTimeMillis()
 )

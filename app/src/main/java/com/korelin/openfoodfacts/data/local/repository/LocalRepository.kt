@@ -3,24 +3,28 @@ package com.korelin.openfoodfacts.data.local.repository
 import com.korelin.openfoodfacts.data.local.AppDatabase
 import com.korelin.openfoodfacts.data.local.entity.FavoriteEntity
 import com.korelin.openfoodfacts.data.local.entity.HistoryEntity
-import com.korelin.openfoodfacts.data.local.entity.ProductEntity
 import com.korelin.openfoodfacts.data.model.ProductInfo
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
+import javax.inject.Inject
+import javax.inject.Singleton
 
 class LocalRepository(
     private val db: AppDatabase
 ) {
+    @Singleton
+    class LocalRepository @Inject constructor(
+        private val db: AppDatabase
+    )
 
     // ===== PRODUCTS =====
-
     suspend fun saveProduct(product: ProductInfo) {
-        val entity = ProductEntity.fromProductInfo(product)
+        val entity = com.korelin.openfoodfacts.data.local.entity.ProductEntity.fromProductInfo(product)
         db.productDao().insertProduct(entity)
     }
 
     suspend fun saveProducts(products: List<ProductInfo>) {
-        val entities = products.map { ProductEntity.fromProductInfo(it) }
+        val entities = products.map { com.korelin.openfoodfacts.data.local.entity.ProductEntity.fromProductInfo(it) }
         db.productDao().insertAllProducts(entities)
     }
 
@@ -44,18 +48,37 @@ class LocalRepository(
     }
 
     // ===== FAVORITES =====
+    suspend fun addToFavorites(product: ProductInfo) {
+        val favorite = FavoriteEntity(
+            productCode = product.code ?: return,
+            productName = product.product_name,
+            brand = product.brands,
+            imageUrl = product.image_front_url ?: product.image_url,
+            addedAt = System.currentTimeMillis()
+        )
+        db.productDao().addToFavorites(favorite)
 
-    suspend fun addToFavorites(productCode: String) {
-        db.productDao().addToFavorites(FavoriteEntity(productCode))
+        // Также сохраняем полную информацию о продукте
+        saveProduct(product)
     }
 
     suspend fun removeFromFavorites(productCode: String) {
-        db.productDao().removeFromFavorites(FavoriteEntity(productCode))
+        db.productDao().removeFromFavoritesByCode(productCode)
     }
 
-    fun getFavorites(): Flow<List<String>> {
+    fun getFavorites(): Flow<List<ProductInfo>> {
         return db.productDao().getFavorites().map { favorites ->
-            favorites.map { it.productCode }
+            favorites.mapNotNull { favorite ->
+                // Пытаемся получить полную информацию о продукте из кэша
+                runCatching {
+                    db.productDao().getProductByCode(favorite.productCode)?.toProductInfo()
+                }.getOrNull() ?: ProductInfo(
+                    code = favorite.productCode,
+                    product_name = favorite.productName,
+                    brands = favorite.brand,
+                    image_url = favorite.imageUrl
+                )
+            }
         }
     }
 
@@ -68,18 +91,45 @@ class LocalRepository(
     }
 
     // ===== HISTORY =====
+    suspend fun addToHistory(product: ProductInfo) {
+        val historyItem = HistoryEntity(
+            productCode = product.code ?: return,
+            productName = product.product_name,
+            brand = product.brands,
+            imageUrl = product.image_front_url ?: product.image_url,
+            viewedAt = System.currentTimeMillis()
+        )
+        db.productDao().addToHistory(historyItem)
 
-    suspend fun addToHistory(productCode: String) {
-        db.productDao().addToHistory(HistoryEntity(productCode = productCode))
+        // Сохраняем продукт в кэш
+        saveProduct(product)
     }
 
-    suspend fun getRecentHistory(limit: Int = 20): List<String> {
-        return db.productDao().getRecentHistory(limit).map { it.productCode }
+    suspend fun getRecentHistory(limit: Int = 20): List<ProductInfo> {
+        return db.productDao().getRecentHistory(limit).mapNotNull { history ->
+            runCatching {
+                db.productDao().getProductByCode(history.productCode)?.toProductInfo()
+            }.getOrNull() ?: ProductInfo(
+                code = history.productCode,
+                product_name = history.productName,
+                brands = history.brand,
+                image_url = history.imageUrl
+            )
+        }
     }
 
-    fun getAllHistory(): Flow<List<String>> {
-        return db.productDao().getAllHistory().map { history ->
-            history.map { it.productCode }
+    fun getAllHistory(): Flow<List<ProductInfo>> {
+        return db.productDao().getAllHistory().map { historyList ->
+            historyList.mapNotNull { history ->
+                runCatching {
+                    db.productDao().getProductByCode(history.productCode)?.toProductInfo()
+                }.getOrNull() ?: ProductInfo(
+                    code = history.productCode,
+                    product_name = history.productName,
+                    brands = history.brand,
+                    image_url = history.imageUrl
+                )
+            }
         }
     }
 
@@ -94,5 +144,9 @@ class LocalRepository(
 
     suspend fun getHistoryCount(): Int {
         return db.productDao().getHistoryCount()
+    }
+
+    suspend fun removeFromHistory(productCode: String) {
+        db.productDao().removeFromHistory(productCode)
     }
 }

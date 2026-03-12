@@ -3,6 +3,8 @@ package com.korelin.openfoodfacts.ui.screens.home.components
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -18,7 +20,9 @@ import com.korelin.openfoodfacts.ui.theme.Theme
 @Composable
 fun NewSection(
     products: List<ProductInfo>,
+    favoritesMap: Map<String, Boolean>,
     onProductClick: (ProductInfo) -> Unit,
+    onFavoriteToggle: (ProductInfo, Boolean) -> Unit,
     modifier: Modifier = Modifier
 ) {
     if (products.isEmpty()) return
@@ -32,8 +36,6 @@ fun NewSection(
 
         Spacer(modifier = Modifier.height(8.dp))
 
-        // ВАЖНО: Это не LazyColumn, а Column с вертикальным расположением
-        // Так как эта секция уже находится внутри LazyColumn в HomeScreen
         Column(
             modifier = Modifier
                 .fillMaxWidth()
@@ -43,6 +45,10 @@ fun NewSection(
             products.forEach { product ->
                 NewSectionItem(
                     product = product,
+                    isFavorite = favoritesMap[product.code] == true,
+                    onFavoriteClick = {
+                        onFavoriteToggle(product, favoritesMap[product.code] != true)
+                    },
                     onClick = { onProductClick(product) }
                 )
             }
@@ -53,6 +59,8 @@ fun NewSection(
 @Composable
 fun NewSectionItem(
     product: ProductInfo,
+    isFavorite: Boolean,
+    onFavoriteClick: () -> Unit,
     onClick: () -> Unit
 ) {
     Card(
@@ -110,6 +118,22 @@ fun NewSectionItem(
                     style = Theme.typography.bodySmall,
                     color = Theme.colors.onSurfaceVariant,
                     maxLines = 1
+                )
+            }
+
+            // Иконка избранного
+            IconButton(
+                onClick = onFavoriteClick,
+                modifier = Modifier.size(32.dp)
+            ) {
+                Icon(
+                    imageVector = if (isFavorite)
+                        androidx.compose.material.icons.Icons.Default.Favorite
+                    else
+                        androidx.compose.material.icons.Icons.Default.FavoriteBorder,
+                    contentDescription = if (isFavorite) "Удалить из избранного" else "Добавить в избранное",
+                    tint = if (isFavorite) Theme.colors.primary else Theme.colors.onSurfaceVariant,
+                    modifier = Modifier.size(20.dp)
                 )
             }
         }

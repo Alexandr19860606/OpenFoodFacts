@@ -7,5 +7,8 @@ import androidx.room.PrimaryKey
 data class FavoriteEntity(
     @PrimaryKey
     val productCode: String,
+    val productName: String?,
+    val brand: String?,
+    val imageUrl: String?,
     val addedAt: Long = System.currentTimeMillis()
 )

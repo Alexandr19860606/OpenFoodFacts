@@ -9,8 +9,11 @@ import kotlinx.coroutines.flow.flow
 import retrofit2.HttpException
 import java.net.SocketTimeoutException
 import java.net.UnknownHostException
+import javax.inject.Inject
+import javax.inject.Singleton
 
-class ProductRepository {
+@Singleton
+class ProductRepository @Inject constructor() {
 
     private val api = RetrofitClient.apiService
 

@@ -52,8 +52,11 @@ interface ProductDao {
     @Query("SELECT COUNT(*) FROM favorites")
     suspend fun getFavoritesCount(): Int
 
+    @Query("DELETE FROM favorites WHERE productCode = :productCode")
+    suspend fun removeFromFavoritesByCode(productCode: String)
+
     // ===== HISTORY =====
-    @Insert
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun addToHistory(history: HistoryEntity)
 
     @Query("SELECT * FROM history ORDER BY viewedAt DESC LIMIT :limit")
@@ -70,4 +73,7 @@ interface ProductDao {
 
     @Query("SELECT COUNT(*) FROM history")
     suspend fun getHistoryCount(): Int
+
+    @Query("DELETE FROM history WHERE productCode = :productCode")
+    suspend fun removeFromHistory(productCode: String)
 }

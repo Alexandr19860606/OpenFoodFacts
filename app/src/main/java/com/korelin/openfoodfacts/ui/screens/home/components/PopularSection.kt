@@ -14,7 +14,9 @@ import com.korelin.openfoodfacts.ui.theme.Theme
 @Composable
 fun PopularSection(
     products: List<ProductInfo>,
+    favoritesMap: Map<String, Boolean>,
     onProductClick: (ProductInfo) -> Unit,
+    onFavoriteToggle: (ProductInfo, Boolean) -> Unit,
     modifier: Modifier = Modifier
 ) {
     if (products.isEmpty()) return
@@ -32,9 +34,16 @@ fun PopularSection(
             contentPadding = PaddingValues(horizontal = 16.dp),
             horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            items(products) { product ->
+            items(
+                items = products,
+                key = { it.code ?: it.product_name ?: "" }
+            ) { product ->
                 ProductCard(
                     product = product,
+                    isFavorite = favoritesMap[product.code] == true,
+                    onFavoriteClick = {
+                        onFavoriteToggle(product, favoritesMap[product.code] != true)
+                    },
                     onClick = {
                         onProductClick(product)
                     }
