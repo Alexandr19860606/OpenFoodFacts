@@ -1,0 +1,58 @@
+package com.korelin.openfoodfacts.data.local.converter
+
+import androidx.room.TypeConverter
+import com.google.gson.Gson
+import com.google.gson.reflect.TypeToken
+import com.korelin.openfoodfacts.data.local.entity.NotificationType
+
+class Converters {
+
+    private val gson = Gson()
+
+    @TypeConverter
+    fun fromStringList(value: List<String>?): String? {
+        return value?.let { gson.toJson(it) }
+    }
+
+    @TypeConverter
+    fun toStringList(value: String?): List<String>? {
+        return value?.let {
+            val type = object : TypeToken<List<String>>() {}.type
+            gson.fromJson(it, type)
+        }
+    }
+
+    @TypeConverter
+    fun fromIntList(value: List<Int>?): String? {
+        return value?.let { gson.toJson(it) }
+    }
+
+    @TypeConverter
+    fun toIntList(value: String?): List<Int>? {
+        return value?.let {
+            val type = object : TypeToken<List<Int>>() {}.type
+            gson.fromJson(it, type)
+        }
+    }
+
+    @TypeConverter
+    fun fromLong(value: Long?): String? {
+        return value?.toString()
+    }
+
+    @TypeConverter
+    fun toLong(value: String?): Long? {
+        return value?.toLongOrNull()
+    }
+
+    // Новые конвертеры для NotificationType
+    @TypeConverter
+    fun fromNotificationType(type: NotificationType): String {
+        return type.name
+    }
+
+    @TypeConverter
+    fun toNotificationType(type: String): NotificationType {
+        return NotificationType.valueOf(type)
+    }
+}

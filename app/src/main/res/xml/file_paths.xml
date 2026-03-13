@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<paths xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Внешнее хранилище (для Android 4.4-9) -->
+    <external-path
+        name="external_storage_root"
+        path="." />
+
+    <!-- Внешние файлы приложения (Android 4.4+) -->
+    <external-files-path
+        name="external_files"
+        path="." />
+
+    <!-- Кэш приложения -->
+    <cache-path
+        name="cache"
+        path="." />
+
+    <!-- Внешний кэш -->
+    <external-cache-path
+        name="external_cache"
+        path="." />
+
+    <!-- Внутренние файлы приложения -->
+    <files-path
+        name="internal_files"
+        path="." />
+
+    <!-- Специально для картинок OpenFoodFacts -->
+    <external-files-path
+        name="openfoodfacts_images"
+        path="Pictures/OpenFoodFacts" />
+</paths>
