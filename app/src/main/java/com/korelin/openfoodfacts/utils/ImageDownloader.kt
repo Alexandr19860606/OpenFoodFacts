@@ -13,19 +13,111 @@ import android.widget.Toast
 import coil.ImageLoader
 import coil.request.ImageRequest
 import coil.request.SuccessResult
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
+import kotlinx.coroutines.*
 import java.io.File
 import java.io.FileOutputStream
+import java.lang.ref.WeakReference
 import java.net.HttpURLConnection
 import java.net.URL
 
 object ImageDownloader {
 
+    // Используем WeakReference для предотвращения утечек
+    private var imageLoaderRef: WeakReference<ImageLoader>? = null
+
+    // Ограничиваем количество одновременных загрузок
+    private val downloadDispatcher = Dispatchers.IO.limitedParallelism(2)
+
+    // Отменяем предыдущие загрузки при новом запросе
+    private var currentJob: Job? = null
+
     /**
-     * Скачивает изображение используя HttpURLConnection (без доп. зависимостей)
+     * Скачивает изображение используя Coil с защитой от утечек
+     */
+    fun downloadImageWithCoil(
+        context: Context,
+        imageUrl: String?,
+        fileName: String,
+        onComplete: (() -> Unit)? = null
+    ) {
+        if (imageUrl.isNullOrEmpty()) {
+            Toast.makeText(context, "Нет изображения для скачивания", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        // Отменяем предыдущую загрузку
+        currentJob?.cancel()
+
+        currentJob = CoroutineScope(downloadDispatcher + Job()).launch {
+            try {
+                // Таймаут на всю операцию
+                withTimeout(15000L) {
+                    // Создаем ImageLoader с правильной конфигурацией
+                    val imageLoader = ImageLoader.Builder(context)
+                        .memoryCachePolicy(coil.request.CachePolicy.ENABLED)
+                        .diskCachePolicy(coil.request.CachePolicy.ENABLED)
+                        .respectCacheHeaders(false)
+                        .build()
+
+                    // Сохраняем weak reference
+                    imageLoaderRef = WeakReference(imageLoader)
+
+                    val request = ImageRequest.Builder(context)
+                        .data(imageUrl)
+                        .allowHardware(false)
+                        .memoryCacheKey("download_$fileName")
+                        .build()
+
+                    val result = imageLoader.execute(request)
+
+                    if (result is SuccessResult) {
+                        val drawable = result.drawable
+                        val bitmap = when (drawable) {
+                            is BitmapDrawable -> drawable.bitmap
+                            else -> {
+                                val bitmap = Bitmap.createBitmap(
+                                    drawable.intrinsicWidth.takeIf { it > 0 } ?: 100,
+                                    drawable.intrinsicHeight.takeIf { it > 0 } ?: 100,
+                                    Bitmap.Config.ARGB_8888
+                                )
+                                val canvas = android.graphics.Canvas(bitmap)
+                                drawable.setBounds(0, 0, canvas.width, canvas.height)
+                                drawable.draw(canvas)
+                                bitmap
+                            }
+                        }
+
+                        withContext(Dispatchers.Main) {
+                            saveImageToGallery(context, bitmap, fileName)
+                            onComplete?.invoke()
+                        }
+                    } else {
+                        withContext(Dispatchers.Main) {
+                            Toast.makeText(context, "Ошибка загрузки изображения", Toast.LENGTH_SHORT).show()
+                        }
+                    }
+
+                    // Явно очищаем ресурсы - ImageLoader не имеет метода dispose()
+                    // Вместо этого позволяем GC собрать объект
+                    imageLoaderRef?.clear()
+                }
+            } catch (e: TimeoutCancellationException) {
+                withContext(Dispatchers.Main) {
+                    Toast.makeText(context, "Превышено время загрузки", Toast.LENGTH_SHORT).show()
+                }
+            } catch (e: Exception) {
+                withContext(Dispatchers.Main) {
+                    Toast.makeText(context, "Ошибка: ${e.message}", Toast.LENGTH_SHORT).show()
+                }
+            } finally {
+                imageLoaderRef?.clear()
+                imageLoaderRef = null
+            }
+        }
+    }
+
+    /**
+     * Альтернативный метод: скачивает изображение используя HttpURLConnection
      */
     fun downloadImage(context: Context, imageUrl: String?, fileName: String) {
         if (imageUrl.isNullOrEmpty()) {
@@ -37,56 +129,6 @@ object ImageDownloader {
             try {
                 val bitmap = downloadBitmap(imageUrl)
                 if (bitmap != null) {
-                    withContext(Dispatchers.Main) {
-                        saveImageToGallery(context, bitmap, fileName)
-                    }
-                } else {
-                    withContext(Dispatchers.Main) {
-                        Toast.makeText(context, "Ошибка загрузки изображения", Toast.LENGTH_SHORT).show()
-                    }
-                }
-            } catch (e: Exception) {
-                withContext(Dispatchers.Main) {
-                    Toast.makeText(context, "Ошибка: ${e.message}", Toast.LENGTH_SHORT).show()
-                }
-            }
-        }
-    }
-
-    /**
-     * Скачивает изображение используя Coil (рекомендуемый способ)
-     */
-    fun downloadImageWithCoil(context: Context, imageUrl: String?, fileName: String) {
-        if (imageUrl.isNullOrEmpty()) {
-            Toast.makeText(context, "Нет изображения для скачивания", Toast.LENGTH_SHORT).show()
-            return
-        }
-
-        CoroutineScope(Dispatchers.IO).launch {
-            try {
-                val imageLoader = ImageLoader(context)
-                val request = ImageRequest.Builder(context)
-                    .data(imageUrl)
-                    .allowHardware(false)
-                    .build()
-
-                val result = imageLoader.execute(request)
-                if (result is SuccessResult) {
-                    val drawable = result.drawable
-                    val bitmap = when (drawable) {
-                        is BitmapDrawable -> drawable.bitmap
-                        else -> {
-                            val bitmap = Bitmap.createBitmap(
-                                drawable.intrinsicWidth.takeIf { it > 0 } ?: 100,
-                                drawable.intrinsicHeight.takeIf { it > 0 } ?: 100,
-                                Bitmap.Config.ARGB_8888
-                            )
-                            val canvas = android.graphics.Canvas(bitmap)
-                            drawable.setBounds(0, 0, canvas.width, canvas.height)
-                            drawable.draw(canvas)
-                            bitmap
-                        }
-                    }
                     withContext(Dispatchers.Main) {
                         saveImageToGallery(context, bitmap, fileName)
                     }
@@ -173,7 +215,7 @@ object ImageDownloader {
     }
 
     /**
-     * Сохраняет во внешнее хранилище (Android 9 и ниже) - используем MediaScannerConnection
+     * Сохраняет во внешнее хранилище (Android 9 и ниже)
      */
     @Suppress("DEPRECATION")
     private fun saveToExternalStorageLegacy(context: Context, bitmap: Bitmap, fileName: String) {
@@ -201,6 +243,13 @@ object ImageDownloader {
                 Toast.makeText(context, "✅ Изображение сохранено в папку OpenFoodFacts", Toast.LENGTH_LONG).show()
             }
         }
+    }
+
+    // Отменяем все текущие загрузки
+    fun cancelAllDownloads() {
+        currentJob?.cancel()
+        imageLoaderRef?.clear()
+        imageLoaderRef = null
     }
 
     /**

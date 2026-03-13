@@ -6,12 +6,13 @@ import com.korelin.openfoodfacts.data.model.SearchResponse
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.withTimeout
 import retrofit2.HttpException
 import java.net.SocketTimeoutException
 import java.net.UnknownHostException
 import javax.inject.Inject
 import javax.inject.Singleton
-import kotlinx.coroutines.withTimeout
+import kotlin.coroutines.cancellation.CancellationException
 
 @Singleton
 class ProductRepository @Inject constructor() {
@@ -85,11 +86,12 @@ class ProductRepository @Inject constructor() {
         var currentDelay = initialDelay
         repeat(times - 1) { attempt ->
             try {
-                return withTimeout(8000) { // Общий таймаут 8 секунд
+                return withTimeout(8000) {
                     block()
                 }
             } catch (e: Exception) {
                 when {
+                    e is CancellationException -> throw e
                     e is SocketTimeoutException -> {
                         if (attempt < times - 2) {
                             delay(currentDelay)
@@ -157,16 +159,35 @@ class ProductRepository @Inject constructor() {
             val popular = getPopularProducts()
             val new = getNewProducts()
 
-            if (popular.isEmpty() && new.isEmpty()) {
-                HomeDataState.Success(
-                    popular = mockPopularProducts,
-                    new = mockNewProducts.shuffled().take(3)
-                )
-            } else {
-                HomeDataState.Success(popular = popular, new = new)
+            when {
+                popular.isEmpty() && new.isEmpty() -> {
+                    HomeDataState.Success(
+                        popular = mockPopularProducts,
+                        new = mockNewProducts.shuffled().take(3)
+                    )
+                }
+                popular.isEmpty() -> {
+                    HomeDataState.Success(
+                        popular = mockPopularProducts,
+                        new = new
+                    )
+                }
+                new.isEmpty() -> {
+                    HomeDataState.Success(
+                        popular = popular,
+                        new = mockNewProducts.shuffled().take(3)
+                    )
+                }
+                else -> {
+                    HomeDataState.Success(popular = popular, new = new)
+                }
             }
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: UnknownHostException) {
             HomeDataState.Error("Нет подключения к интернету")
+        } catch (e: SocketTimeoutException) {
+            HomeDataState.Error("Превышено время ожидания")
         } catch (e: HttpException) {
             HomeDataState.Error("Ошибка сервера: ${e.code()}")
         } catch (e: Exception) {

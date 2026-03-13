@@ -15,6 +15,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -35,6 +36,7 @@ import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.google.accompanist.permissions.*
 import com.korelin.openfoodfacts.data.model.ProductInfo
+import com.korelin.openfoodfacts.data.model.Nutriments
 import com.korelin.openfoodfacts.ui.components.LoadingIndicator
 import com.korelin.openfoodfacts.ui.theme.Theme
 import com.korelin.openfoodfacts.utils.*
@@ -63,6 +65,10 @@ fun ProductScreen(
         android.Manifest.permission.WRITE_CALENDAR
     )
 
+    // Состояние для диалогов
+    var showPermissionDialog by rememberSaveable { mutableStateOf(false) }
+    var pendingAction by rememberSaveable { mutableStateOf<(() -> Unit)?>(null) }
+
     // Анимации
     val fabScale by animateFloatAsState(
         targetValue = if (isScrolling.value) 0.8f else 1f,
@@ -80,14 +86,18 @@ fun ProductScreen(
         viewModel.loadProduct(barcode)
     }
 
+    // Безопасный продукт с дефолтными значениями
+    val safeProduct = remember(product) {
+        product ?: ProductInfo(code = barcode)
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
                 title = {
                     AnimatedContent(
-                        targetState = product?.product_name ?: "Детали продукта",
+                        targetState = safeProduct.product_name ?: "Детали продукта",
                         transitionSpec = {
-                            // Исправляем deprecated with на togetherWith
                             fadeIn() togetherWith fadeOut()
                         },
                         label = "title_animation"
@@ -110,7 +120,7 @@ fun ProductScreen(
                 },
                 actions = {
                     AnimatedVisibility(
-                        visible = !isScrolling.value,
+                        visible = !isScrolling.value && product != null,
                         enter = fadeIn() + scaleIn(),
                         exit = fadeOut() + scaleOut()
                     ) {
@@ -163,32 +173,32 @@ fun ProductScreen(
                 .padding(paddingValues)
         ) {
             when {
-                isLoading -> {
+                isLoading && product == null -> {
                     LoadingIndicator()
                 }
-                error != null -> {
+                error != null && product == null -> {
                     ErrorContent(
                         error = error!!,
                         onRetry = { viewModel.retry() },
                         onBack = onBackPressed
                     )
                 }
-                product != null -> {
+                else -> {
                     ProductDetailContent(
-                        product = product!!,
-                        scrollState = scrollState,
+                        product = safeProduct,
+                        isLoading = isLoading,
                         isFavorite = isFavorite,
                         onFavoriteClick = { viewModel.toggleFavorite() },
                         onShareClick = {
-                            ShareHelper.shareProduct(context, product!!)
+                            product?.let { ShareHelper.shareProduct(context, it) }
                         },
                         onDownloadImage = {
                             if (storagePermissionState.status.isGranted) {
-                                product!!.getBestImageUrl()?.let { imageUrl ->
-                                    ImageDownloader.downloadImage(
+                                product?.getBestImageUrl()?.let { imageUrl ->
+                                    ImageDownloader.downloadImageWithCoil(
                                         context,
                                         imageUrl,
-                                        product!!.product_name ?: "product_${product!!.code}"
+                                        product?.product_name ?: "product_${product?.code}"
                                     )
                                 }
                             } else {
@@ -199,8 +209,8 @@ fun ProductScreen(
                             if (calendarPermissionState.status.isGranted) {
                                 CalendarHelper.addProductToCalendar(
                                     context,
-                                    product!!.product_name,
-                                    product!!.code ?: ""
+                                    product?.product_name,
+                                    product?.code ?: ""
                                 )
                             } else {
                                 calendarPermissionState.launchPermissionRequest()
@@ -216,7 +226,7 @@ fun ProductScreen(
 @Composable
 fun ProductDetailContent(
     product: ProductInfo,
-    scrollState: LazyListState,
+    isLoading: Boolean,
     isFavorite: Boolean,
     onFavoriteClick: () -> Unit,
     onShareClick: () -> Unit,
@@ -224,55 +234,46 @@ fun ProductDetailContent(
     onAddToCalendar: () -> Unit
 ) {
     LazyColumn(
-        state = scrollState,
         modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(bottom = 80.dp)
     ) {
-        // Изображение с параллакс-эффектом
         item {
-            ParallaxImage(
+            ProductImageSection(
                 imageUrl = product.getBestImageUrl(),
-                productName = product.product_name,
-                scrollState = scrollState
+                productName = product.product_name ?: "Продукт"
             )
         }
 
-        // Основная информация
         item {
-            ProductInfoSection(
+            ProductInfoCard(
                 product = product,
                 isFavorite = isFavorite,
                 onFavoriteClick = onFavoriteClick
             )
         }
 
-        // Пищевая ценность
         if (product.nutriments != null) {
             item {
-                NutritionSection(product = product)
+                NutritionSection(nutriments = product.nutriments!!)
             }
         }
 
-        // Состав
         if (!product.ingredients_text.isNullOrBlank()) {
             item {
-                IngredientsSection(product = product)
+                IngredientsSection(ingredientsText = product.ingredients_text!!)
             }
         }
 
-        // Аллергены
         if (product.getAllergensList().isNotEmpty()) {
             item {
-                AllergensSection(product = product)
+                AllergensSection(allergens = product.getAllergensList())
             }
         }
 
-        // Дополнительная информация
         item {
             AdditionalInfoSection(product = product)
         }
 
-        // Кнопки действий
         item {
             ActionButtonsRow(
                 onShareClick = onShareClick,
@@ -283,31 +284,39 @@ fun ProductDetailContent(
                 modifier = Modifier.padding(16.dp)
             )
         }
+
+        if (isLoading) {
+            item {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    CircularProgressIndicator(color = Theme.colors.primary)
+                }
+            }
+        }
     }
 }
 
 @Composable
-fun ParallaxImage(
+fun ProductImageSection(
     imageUrl: String?,
-    productName: String?,
-    scrollState: LazyListState
+    productName: String
 ) {
-    val scrollOffset = remember { derivedStateOf { scrollState.firstVisibleItemScrollOffset } }
-    val parallaxOffset = scrollOffset.value / 2f
-
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .height(300.dp)
-            .graphicsLayer {
-                translationY = -parallaxOffset
-            }
+            .height(250.dp)
     ) {
         if (!imageUrl.isNullOrEmpty()) {
             AsyncImage(
                 model = ImageRequest.Builder(LocalContext.current)
                     .data(imageUrl)
                     .crossfade(true)
+                    .memoryCacheKey("product_image_$productName")
+                    .diskCacheKey("product_image_$productName")
                     .build(),
                 contentDescription = productName,
                 modifier = Modifier.fillMaxSize(),
@@ -330,7 +339,7 @@ fun ParallaxImage(
 }
 
 @Composable
-fun ProductInfoSection(
+fun ProductInfoCard(
     product: ProductInfo,
     isFavorite: Boolean,
     onFavoriteClick: () -> Unit
@@ -338,8 +347,7 @@ fun ProductInfoSection(
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(16.dp)
-            .animateContentSize(),
+            .padding(16.dp),
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(
             containerColor = Theme.colors.surface
@@ -348,26 +356,38 @@ fun ProductInfoSection(
         Column(
             modifier = Modifier.padding(16.dp)
         ) {
-            // Заголовок
-            Text(
-                text = product.product_name ?: "Без названия",
-                style = MaterialTheme.typography.headlineMedium,
-                color = Theme.colors.onSurface
-            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = product.product_name ?: "Без названия",
+                        style = MaterialTheme.typography.headlineMedium,
+                        color = Theme.colors.onSurface
+                    )
 
-            // Бренд
-            product.brands?.let {
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    text = it,
-                    style = MaterialTheme.typography.titleLarge,
-                    color = Theme.colors.primary
-                )
+                    product.brands?.let {
+                        Text(
+                            text = it,
+                            style = MaterialTheme.typography.titleLarge,
+                            color = Theme.colors.primary
+                        )
+                    }
+                }
+
+                IconButton(onClick = onFavoriteClick) {
+                    Icon(
+                        if (isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
+                        contentDescription = null,
+                        tint = if (isFavorite) Theme.colors.primary else Theme.colors.onSurfaceVariant
+                    )
+                }
             }
 
             Spacer(modifier = Modifier.height(8.dp))
 
-            // Штрих-код
             Text(
                 text = buildAnnotatedString {
                     append("Штрих-код: ")
@@ -378,9 +398,7 @@ fun ProductInfoSection(
                 style = MaterialTheme.typography.bodyMedium
             )
 
-            // Количество
             product.quantity?.let {
-                Spacer(modifier = Modifier.height(4.dp))
                 Text(
                     text = buildAnnotatedString {
                         append("Количество: ")
@@ -394,7 +412,6 @@ fun ProductInfoSection(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Рейтинги
             RatingBadges(product = product)
         }
     }
@@ -493,7 +510,7 @@ fun RatingBadge(
 }
 
 @Composable
-fun NutritionSection(product: ProductInfo) {
+fun NutritionSection(nutriments: Nutriments) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -514,45 +531,34 @@ fun NutritionSection(product: ProductInfo) {
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            val nutriments = product.nutriments
-
-            nutriments?.let {
-                NutritionItem(
-                    label = "Энергия",
-                    value = it.energy_kcal_100g,
-                    unit = "ккал"
-                )
-                NutritionItem(
-                    label = "Жиры",
-                    value = it.fat_100g,
-                    unit = it.fat_unit ?: "г"
-                )
-                NutritionItem(
-                    label = "Насыщенные жиры",
-                    value = it.saturated_fat_100g,
-                    unit = it.saturated_fat_unit ?: "г"
-                )
-                NutritionItem(
-                    label = "Углеводы",
-                    value = it.carbohydrates_100g,
-                    unit = it.carbohydrates_unit ?: "г"
-                )
-                NutritionItem(
-                    label = "Сахара",
-                    value = it.sugars_100g,
-                    unit = it.sugars_unit ?: "г"
-                )
-                NutritionItem(
-                    label = "Белки",
-                    value = it.proteins_100g,
-                    unit = it.proteins_unit ?: "г"
-                )
-                NutritionItem(
-                    label = "Соль",
-                    value = it.salt_100g,
-                    unit = it.salt_unit ?: "г"
-                )
-            }
+            NutritionItem(
+                label = "Энергия",
+                value = formatNutritionValue(nutriments.energy_kcal_100g, "ккал")
+            )
+            NutritionItem(
+                label = "Жиры",
+                value = formatNutritionValue(nutriments.fat_100g, nutriments.fat_unit ?: "г")
+            )
+            NutritionItem(
+                label = "Насыщенные жиры",
+                value = formatNutritionValue(nutriments.saturated_fat_100g, nutriments.saturated_fat_unit ?: "г")
+            )
+            NutritionItem(
+                label = "Углеводы",
+                value = formatNutritionValue(nutriments.carbohydrates_100g, nutriments.carbohydrates_unit ?: "г")
+            )
+            NutritionItem(
+                label = "Сахара",
+                value = formatNutritionValue(nutriments.sugars_100g, nutriments.sugars_unit ?: "г")
+            )
+            NutritionItem(
+                label = "Белки",
+                value = formatNutritionValue(nutriments.proteins_100g, nutriments.proteins_unit ?: "г")
+            )
+            NutritionItem(
+                label = "Соль",
+                value = formatNutritionValue(nutriments.salt_100g, nutriments.salt_unit ?: "г")
+            )
         }
     }
 }
@@ -560,8 +566,7 @@ fun NutritionSection(product: ProductInfo) {
 @Composable
 fun NutritionItem(
     label: String,
-    value: Double?,
-    unit: String
+    value: String
 ) {
     Row(
         modifier = Modifier
@@ -575,7 +580,7 @@ fun NutritionItem(
             color = Theme.colors.onPrimaryContainer
         )
         Text(
-            text = formatNutritionValue(value, unit),
+            text = value,
             style = MaterialTheme.typography.bodyMedium,
             color = Theme.colors.onPrimaryContainer,
             fontWeight = FontWeight.Bold
@@ -584,7 +589,7 @@ fun NutritionItem(
 }
 
 @Composable
-fun IngredientsSection(product: ProductInfo) {
+fun IngredientsSection(ingredientsText: String) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -602,7 +607,7 @@ fun IngredientsSection(product: ProductInfo) {
             Spacer(modifier = Modifier.height(8.dp))
 
             Text(
-                text = product.ingredients_text ?: "Информация о составе отсутствует",
+                text = ingredientsText,
                 style = MaterialTheme.typography.bodyMedium
             )
         }
@@ -610,7 +615,7 @@ fun IngredientsSection(product: ProductInfo) {
 }
 
 @Composable
-fun AllergensSection(product: ProductInfo) {
+fun AllergensSection(allergens: List<String>) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -631,23 +636,14 @@ fun AllergensSection(product: ProductInfo) {
 
             Spacer(modifier = Modifier.height(8.dp))
 
-            val allergens = product.getAllergensList()
-            if (allergens.isNotEmpty()) {
-                Text(
-                    text = allergens.joinToString(", ") {
-                        it.replace("en:", "").replace("fr:", "")
-                    },
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = Theme.colors.onErrorContainer,
-                    fontWeight = FontWeight.Bold
-                )
-            } else {
-                Text(
-                    text = "Информация об аллергенах отсутствует",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = Theme.colors.onErrorContainer
-                )
-            }
+            Text(
+                text = allergens.joinToString(", ") {
+                    it.replace("en:", "").replace("fr:", "")
+                },
+                style = MaterialTheme.typography.bodyMedium,
+                color = Theme.colors.onErrorContainer,
+                fontWeight = FontWeight.Bold
+            )
         }
     }
 }
