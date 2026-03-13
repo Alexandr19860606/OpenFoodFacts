@@ -59,7 +59,7 @@ fun SecondaryButton(
         colors = ButtonDefaults.outlinedButtonColors(
             contentColor = Theme.colors.primary
         ),
-        border = ButtonDefaults.outlinedButtonBorder
+        border = ButtonDefaults.outlinedButtonBorder(enabled = enabled)  // ← ИСПРАВЛЕНО
     ) {
         if (icon != null) {
             Icon(

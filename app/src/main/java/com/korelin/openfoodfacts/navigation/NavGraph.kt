@@ -7,8 +7,11 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import com.korelin.openfoodfacts.ui.screens.favorites.FavoritesScreen
 import com.korelin.openfoodfacts.ui.screens.history.HistoryScreen
+import com.korelin.openfoodfacts.ui.screens.home.HomeScreen
+import com.korelin.openfoodfacts.ui.screens.notifications.NotificationScreen
 import com.korelin.openfoodfacts.ui.screens.product.ProductScreen
 import com.korelin.openfoodfacts.ui.screens.scanner.ScannerScreen
+import com.korelin.openfoodfacts.ui.screens.search.SearchScreen
 import com.korelin.openfoodfacts.ui.screens.settings.SettingsScreen
 
 @Composable
@@ -18,62 +21,86 @@ fun NavGraph(
 ) {
     NavHost(
         navController = navController,
-        startDestination = Screen.Scanner.route,
+        startDestination = Screen.Home.route,
         modifier = modifier
     ) {
+        // Главный экран
+        composable(Screen.Home.route) {
+            HomeScreen(navController = navController)
+        }
+
+        // Сканер
         composable(Screen.Scanner.route) {
             ScannerScreen(
                 onBarcodeScanned = { barcode ->
                     navController.navigate(Screen.Product.passBarcode(barcode))
                 },
-                onNavigateToHistory = {
-                    navController.navigate(Screen.History.route)
-                },
-                onNavigateToFavorites = {
-                    navController.navigate(Screen.Favorites.route)
-                },
-                onNavigateToSettings = {
-                    navController.navigate(Screen.Settings.route)
-                }
+                onNavigateToHistory = { navController.navigate(Screen.History.route) },
+                onNavigateToFavorites = { navController.navigate(Screen.Favorites.route) },
+                onNavigateToSettings = { navController.navigate(Screen.Settings.route) }
             )
         }
 
+        // Детали продукта
         composable(Screen.Product.route) { backStackEntry ->
             val barcode = backStackEntry.arguments?.getString("barcode") ?: ""
             ProductScreen(
                 barcode = barcode,
-                onBackPressed = {
-                    navController.popBackStack()
+                onBackPressed = { navController.popBackStack() }
+            )
+        }
+
+        // Поиск
+        composable(Screen.Search.route) { backStackEntry ->
+            val query = backStackEntry.arguments?.getString("query") ?: ""
+            SearchScreen(
+                query = query,
+                onBackPressed = { navController.popBackStack() },
+                onProductClick = { product ->
+                    val barcodeValue = product.code
+                    if (barcodeValue != null) {
+                        navController.navigate(Screen.Product.passBarcode(barcodeValue))
+                    }
                 }
             )
         }
 
+        // История
         composable(Screen.History.route) {
             HistoryScreen(
-                onBackPressed = {
-                    navController.popBackStack()
-                },
+                onBackPressed = { navController.popBackStack() },
                 onProductClick = { barcode ->
                     navController.navigate(Screen.Product.passBarcode(barcode))
                 }
             )
         }
 
+        // Избранное
         composable(Screen.Favorites.route) {
             FavoritesScreen(
-                onBackPressed = {
-                    navController.popBackStack()
-                },
+                onBackPressed = { navController.popBackStack() },
                 onProductClick = { barcode ->
                     navController.navigate(Screen.Product.passBarcode(barcode))
                 }
             )
         }
 
+        // Настройки
         composable(Screen.Settings.route) {
             SettingsScreen(
-                onBackPressed = {
-                    navController.popBackStack()
+                onBackPressed = { navController.popBackStack() }
+            )
+        }
+
+        // Уведомления - НОВЫЙ ЭКРАН
+        composable(Screen.Notifications.route) {
+            NotificationScreen(
+                onBackPressed = { navController.popBackStack() },
+                onNotificationClick = { notification ->
+                    // Если в уведомлении есть код продукта, переходим на экран продукта
+                    notification.productCode?.let { productCode ->
+                        navController.navigate(Screen.Product.passBarcode(productCode))
+                    }
                 }
             )
         }
