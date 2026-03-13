@@ -3,6 +3,7 @@ package com.korelin.openfoodfacts.data.local.converter
 import androidx.room.TypeConverter
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
+import com.korelin.openfoodfacts.data.local.entity.NotificationType
 
 class Converters {
 
@@ -42,5 +43,16 @@ class Converters {
     @TypeConverter
     fun toLong(value: String?): Long? {
         return value?.toLongOrNull()
+    }
+
+    // Новые конвертеры для NotificationType
+    @TypeConverter
+    fun fromNotificationType(type: NotificationType): String {
+        return type.name
+    }
+
+    @TypeConverter
+    fun toNotificationType(type: String): NotificationType {
+        return NotificationType.valueOf(type)
     }
 }

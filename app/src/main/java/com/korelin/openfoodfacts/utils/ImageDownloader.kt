@@ -5,11 +5,11 @@ import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.drawable.BitmapDrawable
+import android.media.MediaScannerConnection
 import android.os.Build
 import android.os.Environment
 import android.provider.MediaStore
 import android.widget.Toast
-import androidx.core.content.FileProvider
 import coil.ImageLoader
 import coil.request.ImageRequest
 import coil.request.SuccessResult
@@ -25,7 +25,7 @@ import java.net.URL
 object ImageDownloader {
 
     /**
-     * Скачивает изображение используя HttpURLConnection
+     * Скачивает изображение используя HttpURLConnection (без доп. зависимостей)
      */
     fun downloadImage(context: Context, imageUrl: String?, fileName: String) {
         if (imageUrl.isNullOrEmpty()) {
@@ -54,7 +54,7 @@ object ImageDownloader {
     }
 
     /**
-     * Скачивает изображение используя Coil
+     * Скачивает изображение используя Coil (рекомендуемый способ)
      */
     fun downloadImageWithCoil(context: Context, imageUrl: String?, fileName: String) {
         if (imageUrl.isNullOrEmpty()) {
@@ -139,7 +139,7 @@ object ImageDownloader {
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                     saveToMediaStore(context, bitmap, imageFileName)
                 } else {
-                    saveToExternalStorage(context, bitmap, imageFileName)
+                    saveToExternalStorageLegacy(context, bitmap, imageFileName)
                 }
             } catch (e: Exception) {
                 withContext(Dispatchers.Main) {
@@ -173,9 +173,10 @@ object ImageDownloader {
     }
 
     /**
-     * Сохраняет во внешнее хранилище (Android 9 и ниже)
+     * Сохраняет во внешнее хранилище (Android 9 и ниже) - используем MediaScannerConnection
      */
-    private fun saveToExternalStorage(context: Context, bitmap: Bitmap, fileName: String) {
+    @Suppress("DEPRECATION")
+    private fun saveToExternalStorageLegacy(context: Context, bitmap: Bitmap, fileName: String) {
         val picturesDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES)
         val appDir = File(picturesDir, "OpenFoodFacts")
 
@@ -188,12 +189,12 @@ object ImageDownloader {
         FileOutputStream(file).use { outputStream ->
             bitmap.compress(Bitmap.CompressFormat.JPEG, 90, outputStream)
 
-            // Уведомляем галерею о новом файле
-            context.sendBroadcast(
-                android.content.Intent(
-                    android.content.Intent.ACTION_MEDIA_SCANNER_SCAN_FILE,
-                    android.net.Uri.fromFile(file)
-                )
+            // Сканируем файл, чтобы он появился в галерее
+            MediaScannerConnection.scanFile(
+                context,
+                arrayOf(file.absolutePath),
+                arrayOf("image/jpeg"),
+                null
             )
 
             CoroutineScope(Dispatchers.Main).launch {

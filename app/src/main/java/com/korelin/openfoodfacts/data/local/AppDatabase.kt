@@ -6,24 +6,25 @@ import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
 import com.korelin.openfoodfacts.data.local.converter.Converters
+import com.korelin.openfoodfacts.data.local.dao.NotificationDao
 import com.korelin.openfoodfacts.data.local.dao.ProductDao
-import com.korelin.openfoodfacts.data.local.entity.ProductEntity
-import com.korelin.openfoodfacts.data.local.entity.FavoriteEntity
-import com.korelin.openfoodfacts.data.local.entity.HistoryEntity
+import com.korelin.openfoodfacts.data.local.entity.*
 
 @Database(
     entities = [
         ProductEntity::class,
         FavoriteEntity::class,
-        HistoryEntity::class
+        HistoryEntity::class,
+        NotificationEntity::class  // Добавляем новую сущность
     ],
-    version = 1,
+    version = 2,  // Увеличиваем версию БД
     exportSchema = false
 )
 @TypeConverters(Converters::class)
 abstract class AppDatabase : RoomDatabase() {
 
     abstract fun productDao(): ProductDao
+    abstract fun notificationDao(): NotificationDao  // Добавляем DAO
 
     companion object {
         @Volatile
@@ -36,7 +37,7 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     "openfoodfacts_database"
                 )
-                    .fallbackToDestructiveMigration()
+                    .fallbackToDestructiveMigration()  // Важно для миграции
                     .build()
 
                 INSTANCE = instance

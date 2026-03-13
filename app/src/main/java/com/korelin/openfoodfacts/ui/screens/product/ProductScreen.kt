@@ -87,7 +87,8 @@ fun ProductScreen(
                     AnimatedContent(
                         targetState = product?.product_name ?: "Детали продукта",
                         transitionSpec = {
-                            fadeIn() with fadeOut()
+                            // Исправляем deprecated with на togetherWith
+                            fadeIn() togetherWith fadeOut()
                         },
                         label = "title_animation"
                     ) { title ->
@@ -182,9 +183,9 @@ fun ProductScreen(
                             ShareHelper.shareProduct(context, product!!)
                         },
                         onDownloadImage = {
-                            if (ImageDownloader.hasStoragePermission(context)) {
+                            if (storagePermissionState.status.isGranted) {
                                 product!!.getBestImageUrl()?.let { imageUrl ->
-                                    ImageDownloader.downloadImageWithCoil(
+                                    ImageDownloader.downloadImage(
                                         context,
                                         imageUrl,
                                         product!!.product_name ?: "product_${product!!.code}"

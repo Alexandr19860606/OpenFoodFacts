@@ -4,6 +4,7 @@ plugins {
     id("kotlin-parcelize")
     id("kotlin-kapt")
     id("com.google.dagger.hilt.android")
+    id("com.google.gms.google-services")
 }
 
 android {
@@ -35,16 +36,16 @@ android {
     }
 
     composeOptions {
-        kotlinCompilerExtensionVersion = "1.5.10"
+        kotlinCompilerExtensionVersion = "1.5.14"  // Совместим с Kotlin 1.9.22
     }
 
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_11
-        targetCompatibility = JavaVersion.VERSION_11
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
     }
 
     kotlinOptions {
-        jvmTarget = "11"
+        jvmTarget = "17"
     }
 }
 
@@ -108,33 +109,30 @@ dependencies {
     implementation("com.google.dagger:hilt-android:2.48")
     kapt("com.google.dagger:hilt-compiler:2.48")
     implementation("androidx.hilt:hilt-navigation-compose:1.1.0")
+    implementation("androidx.hilt:hilt-work:1.1.0")
+    kapt("androidx.hilt:hilt-compiler:1.1.0")
+
+    // WorkManager
+    implementation("androidx.work:work-runtime-ktx:2.9.0")
+
+    // Firebase - используем стабильные версии
+    implementation("com.google.firebase:firebase-messaging:23.4.0")
+    implementation("com.google.firebase:firebase-analytics:21.5.0")
+
+    // Accompanist для permissions
+    implementation("com.google.accompanist:accompanist-permissions:0.34.0")
 
     // Testing
     testImplementation("junit:junit:4.13.2")
     androidTestImplementation("androidx.test.ext:junit:1.1.5")
     androidTestImplementation("androidx.test.espresso:espresso-core:3.5.1")
 
-    implementation("androidx.appcompat:appcompat:1.6.1")
+    // Material Components (для темы в манифесте)
+    implementation("com.google.android.material:material:1.11.0")
 
-    // Coordinator Layout
-    implementation("androidx.coordinatorlayout:coordinatorlayout:1.2.0")
-
-    // MotionLayout (для сложных анимаций)
-    implementation("androidx.constraintlayout:constraintlayout-compose:1.0.1")
-
-    // Для работы с изображениями и скачиванием
-    implementation("androidx.core:core-ktx:1.12.0")
-
-    // Для добавления в календарь
-    implementation("androidx.activity:activity-ktx:1.8.2")
-
-    // Для работы с разрешениями
-    implementation("com.google.accompanist:accompanist-permissions:0.34.0")
-
-    implementation("io.coil-kt:coil-compose:2.5.0")
+    implementation("androidx.media:media:1.7.0")
 }
 
-// Добавляем для Hilt
 kapt {
     correctErrorTypes = true
 }
