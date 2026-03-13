@@ -1,5 +1,6 @@
 package com.korelin.openfoodfacts.ui.screens.search
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -13,7 +14,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.hilt.navigation.compose.hiltViewModel
 import com.korelin.openfoodfacts.data.model.ProductInfo
 import com.korelin.openfoodfacts.ui.components.LoadingIndicator
 import com.korelin.openfoodfacts.ui.theme.CustomShapes
@@ -26,17 +27,18 @@ fun SearchScreen(
     query: String,
     onBackPressed: () -> Unit,
     onProductClick: (ProductInfo) -> Unit,
-    viewModel: SearchViewModel = viewModel()
+    viewModel: SearchViewModel = hiltViewModel()
 ) {
     FileLogger.d("SearchScreen", "Экран поиска открыт с query: $query")
-    FileLogger.e("ProductRepo", "Ошибка загрузки")
+
     val searchResults by viewModel.searchResults.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
+    val isLoadingMore by viewModel.isLoadingMore.collectAsState()
     val error by viewModel.error.collectAsState()
+    val hasMorePages by viewModel.hasMorePages.collectAsState()
 
-    var searchText by remember { mutableStateOf(if (query == "search/") "" else query) }
+    var searchText by remember { mutableStateOf(query) }
 
-    // Запускаем поиск при изменении текста
     LaunchedEffect(searchText) {
         if (searchText.isNotBlank()) {
             viewModel.searchProducts(searchText)
@@ -85,7 +87,7 @@ fun SearchScreen(
                 .padding(paddingValues)
         ) {
             when {
-                isLoading -> {
+                isLoading && searchResults.isEmpty() -> {
                     LoadingIndicator()
                 }
                 error != null -> {
@@ -106,7 +108,7 @@ fun SearchScreen(
                             color = Theme.colors.error
                         )
                         Spacer(modifier = Modifier.height(16.dp))
-                        Button(onClick = { viewModel.searchProducts(searchText) }) {
+                        Button(onClick = { viewModel.retry() }) {
                             Text("Повторить")
                         }
                     }
@@ -135,11 +137,30 @@ fun SearchScreen(
                         contentPadding = PaddingValues(16.dp),
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        items(searchResults) { product ->
+                        items(
+                            items = searchResults,
+                            key = { it.code ?: it.product_name ?: "" }
+                        ) { product ->
                             ProductSearchItem(
                                 product = product,
                                 onClick = { onProductClick(product) }
                             )
+                        }
+
+                        if (isLoadingMore && hasMorePages) {
+                            item {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(16.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    CircularProgressIndicator(
+                                        modifier = Modifier.size(32.dp),
+                                        color = Theme.colors.primary
+                                    )
+                                }
+                            }
                         }
                     }
                 }
@@ -154,8 +175,9 @@ fun ProductSearchItem(
     onClick: () -> Unit
 ) {
     Card(
-        onClick = onClick,
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onClick() },
         shape = CustomShapes.medium
     ) {
         Row(
@@ -192,10 +214,9 @@ fun ProductSearchItem(
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
-                val barcode = product.code
-                if (barcode != null) {
+                product.code?.let {
                     Text(
-                        text = barcode,
+                        text = it,
                         style = Theme.typography.labelSmall,
                         color = Theme.colors.onSurfaceVariant.copy(alpha = 0.7f),
                         maxLines = 1,

@@ -11,6 +11,7 @@ import java.net.SocketTimeoutException
 import java.net.UnknownHostException
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlinx.coroutines.withTimeout
 
 @Singleton
 class ProductRepository @Inject constructor() {
@@ -75,35 +76,41 @@ class ProductRepository @Inject constructor() {
     // ===== RETRY LOGIC =====
 
     private suspend fun <T> retryIO(
-        times: Int = 3,
+        times: Int = 2,
         initialDelay: Long = 1000,
-        maxDelay: Long = 10000,
+        maxDelay: Long = 5000,
         factor: Double = 2.0,
         block: suspend () -> T
     ): T {
         var currentDelay = initialDelay
-        repeat(times - 1) { _ ->
+        repeat(times - 1) { attempt ->
             try {
-                return block()
+                return withTimeout(8000) { // Общий таймаут 8 секунд
+                    block()
+                }
             } catch (e: Exception) {
                 when {
-                    e is HttpException && (e.code() == 504 || e.code() == 503) -> {
-                        delay(currentDelay)
-                        currentDelay = (currentDelay * factor).toLong().coerceAtMost(maxDelay)
-                    }
-                    e is HttpException && e.code() == 200 -> {
-                        delay(currentDelay)
-                        currentDelay = (currentDelay * factor).toLong().coerceAtMost(maxDelay)
-                    }
                     e is SocketTimeoutException -> {
-                        delay(currentDelay)
-                        currentDelay = (currentDelay * factor).toLong().coerceAtMost(maxDelay)
+                        if (attempt < times - 2) {
+                            delay(currentDelay)
+                            currentDelay = (currentDelay * factor).toLong().coerceAtMost(maxDelay)
+                        } else {
+                            throw e
+                        }
+                    }
+                    e is HttpException && e.code() >= 500 -> {
+                        if (attempt < times - 2) {
+                            delay(currentDelay)
+                            currentDelay = (currentDelay * factor).toLong().coerceAtMost(maxDelay)
+                        } else {
+                            throw e
+                        }
                     }
                     else -> throw e
                 }
             }
         }
-        return block()
+        return withTimeout(8000) { block() }
     }
 
     // ===== API METHODS =====
@@ -117,7 +124,7 @@ class ProductRepository @Inject constructor() {
         query: String,
         page: Int = 1,
         pageSize: Int = 20
-    ): SearchResponse = retryIO(times = 3) {
+    ): SearchResponse = retryIO(times = 2) {
         api.searchProducts(query = query, page = page, pageSize = pageSize)
     }
 
@@ -126,7 +133,8 @@ class ProductRepository @Inject constructor() {
             val response = api.getPopularProducts()
             response.products ?: emptyList()
         }
-    } catch (_: Exception) {
+    } catch (e: Exception) {
+        e.printStackTrace()
         mockPopularProducts
     }
 
@@ -135,7 +143,8 @@ class ProductRepository @Inject constructor() {
             val response = api.getNewProducts()
             response.products ?: emptyList()
         }
-    } catch (_: Exception) {
+    } catch (e: Exception) {
+        e.printStackTrace()
         mockNewProducts.shuffled().take(3)
     }
 
@@ -161,7 +170,7 @@ class ProductRepository @Inject constructor() {
         } catch (e: HttpException) {
             HomeDataState.Error("Ошибка сервера: ${e.code()}")
         } catch (e: Exception) {
-            HomeDataState.Error("Ошибка загрузки")
+            HomeDataState.Error("Ошибка загрузки, используем кэш")
         }
 
         emit(homeData)

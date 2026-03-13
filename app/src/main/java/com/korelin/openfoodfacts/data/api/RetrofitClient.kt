@@ -18,10 +18,9 @@ object RetrofitClient {
     private const val BASE_URL = "https://world.openfoodfacts.org/"
 
     private val loggingInterceptor = HttpLoggingInterceptor().apply {
-        level = HttpLoggingInterceptor.Level.BODY
+        level = HttpLoggingInterceptor.Level.BASIC // Уменьшаем логирование до BASIC
     }
 
-    // Создаем TrustManager, который принимает ВСЕ сертификаты
     private val trustAllCerts = arrayOf<TrustManager>(object : X509TrustManager {
         override fun checkClientTrusted(chain: Array<out X509Certificate>?, authType: String?) {}
         override fun checkServerTrusted(chain: Array<out X509Certificate>?, authType: String?) {}
@@ -35,10 +34,10 @@ object RetrofitClient {
     private val client = OkHttpClient.Builder()
         .addInterceptor(loggingInterceptor)
         .sslSocketFactory(sslContext.socketFactory, trustAllCerts[0] as X509TrustManager)
-        .hostnameVerifier { _, _ -> true }  // Отключаем проверку hostname
-        .connectTimeout(120, TimeUnit.SECONDS)
-        .readTimeout(120, TimeUnit.SECONDS)
-        .writeTimeout(120, TimeUnit.SECONDS)
+        .hostnameVerifier { _, _ -> true }
+        .connectTimeout(15, TimeUnit.SECONDS) // Уменьшаем до 15 секунд
+        .readTimeout(15, TimeUnit.SECONDS)
+        .writeTimeout(15, TimeUnit.SECONDS)
         .retryOnConnectionFailure(true)
         .build()
 
@@ -53,8 +52,7 @@ object RetrofitClient {
     fun testConnection() {
         Log.d(TAG, "✅ RetrofitClient инициализирован")
         Log.d(TAG, "   BASE_URL: $BASE_URL")
-        Log.d(TAG, "   Таймауты: 120 секунд")
-        Log.d(TAG, "   Логирование: BODY")
-        Log.d(TAG, "   SSL проверка: ОТКЛЮЧЕНА (только для теста!)")
+        Log.d(TAG, "   Таймауты: 15 секунд")
+        Log.d(TAG, "   Логирование: BASIC")
     }
 }

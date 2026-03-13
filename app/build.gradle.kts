@@ -131,6 +131,13 @@ dependencies {
     implementation("com.google.android.material:material:1.11.0")
 
     implementation("androidx.media:media:1.7.0")
+
+    // DataStore (альтернатива SharedPreferences)
+    implementation("androidx.datastore:datastore-preferences:1.1.1")
+    implementation("androidx.datastore:datastore-preferences-core:1.1.1")
+
+    // Для работы с темами
+    implementation("androidx.appcompat:appcompat:1.6.1")
 }
 
 kapt {

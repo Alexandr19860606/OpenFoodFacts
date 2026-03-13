@@ -83,7 +83,6 @@ class SearchViewModel @Inject constructor(
                 if (reset) {
                     _searchResults.value = newProducts
                 } else {
-                    // Правильное объединение списков
                     _searchResults.value = _searchResults.value + newProducts
                 }
 
@@ -112,7 +111,6 @@ class SearchViewModel @Inject constructor(
     ) {
         if (!_hasMorePages.value || _isLoadingMore.value) return
 
-        // Загружаем следующую страницу, когда дошли до предпоследнего элемента
         if (visibleItemCount + firstVisibleItemPosition >= totalItemCount - 5) {
             loadNextPage()
         }
