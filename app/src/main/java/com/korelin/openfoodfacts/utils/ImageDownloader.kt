@@ -19,14 +19,15 @@ import java.io.FileOutputStream
 import java.lang.ref.WeakReference
 import java.net.HttpURLConnection
 import java.net.URL
+import java.util.concurrent.Executors
 
 object ImageDownloader {
 
     // Используем WeakReference для предотвращения утечек
     private var imageLoaderRef: WeakReference<ImageLoader>? = null
 
-    // Ограничиваем количество одновременных загрузок
-    private val downloadDispatcher = Dispatchers.IO.limitedParallelism(2)
+    // Альтернатива limitedParallelism - создаем свой пул потоков
+    private val downloadDispatcher = Executors.newFixedThreadPool(2).asCoroutineDispatcher()
 
     // Отменяем предыдущие загрузки при новом запросе
     private var currentJob: Job? = null
@@ -97,8 +98,7 @@ object ImageDownloader {
                         }
                     }
 
-                    // Явно очищаем ресурсы - ImageLoader не имеет метода dispose()
-                    // Вместо этого позволяем GC собрать объект
+                    // Явно очищаем ресурсы
                     imageLoaderRef?.clear()
                 }
             } catch (e: TimeoutCancellationException) {

@@ -13,6 +13,7 @@ import com.korelin.openfoodfacts.ui.screens.product.ProductScreen
 import com.korelin.openfoodfacts.ui.screens.scanner.ScannerScreen
 import com.korelin.openfoodfacts.ui.screens.search.SearchScreen
 import com.korelin.openfoodfacts.ui.screens.settings.SettingsScreen
+import com.korelin.openfoodfacts.navigation.Screen
 
 @Composable
 fun NavGraph(
@@ -85,23 +86,22 @@ fun NavGraph(
             )
         }
 
-        // Настройки
-        composable(Screen.Settings.route) {
-            SettingsScreen(
-                onBackPressed = { navController.popBackStack() }
-            )
-        }
-
-        // Уведомления - НОВЫЙ ЭКРАН
+        // Уведомления - 👈 ОСТАВЛЯЕМ ТОЛЬКО ЭТОТ ОДИН БЛОК
         composable(Screen.Notifications.route) {
             NotificationScreen(
                 onBackPressed = { navController.popBackStack() },
                 onNotificationClick = { notification ->
-                    // Если в уведомлении есть код продукта, переходим на экран продукта
                     notification.productCode?.let { productCode ->
                         navController.navigate(Screen.Product.passBarcode(productCode))
                     }
                 }
+            )
+        }
+
+        // Настройки
+        composable(Screen.Settings.route) {
+            SettingsScreen(
+                onBackPressed = { navController.popBackStack() }
             )
         }
     }

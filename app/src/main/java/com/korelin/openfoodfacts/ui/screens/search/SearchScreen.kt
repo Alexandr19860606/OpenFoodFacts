@@ -17,6 +17,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.korelin.openfoodfacts.data.model.ProductInfo
 import com.korelin.openfoodfacts.ui.components.LoadingIndicator
+import com.korelin.openfoodfacts.ui.components.SearchScreenBackground
 import com.korelin.openfoodfacts.ui.theme.CustomShapes
 import com.korelin.openfoodfacts.ui.theme.Theme
 import com.korelin.openfoodfacts.utils.FileLogger
@@ -47,118 +48,120 @@ fun SearchScreen(
         }
     }
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = {
-                    TextField(
-                        value = searchText,
-                        onValueChange = {
-                            searchText = it
-                        },
-                        placeholder = { Text("Поиск продуктов...") },
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = TextFieldDefaults.colors(
-                            focusedContainerColor = MaterialTheme.colorScheme.surface,
-                            unfocusedContainerColor = MaterialTheme.colorScheme.surface,
-                            disabledContainerColor = MaterialTheme.colorScheme.surface,
-                            focusedIndicatorColor = Color.Transparent,
-                            unfocusedIndicatorColor = Color.Transparent
-                        ),
-                        leadingIcon = {
-                            Icon(Icons.Default.Search, contentDescription = null)
-                        }
-                    )
-                },
-                navigationIcon = {
-                    IconButton(onClick = onBackPressed) {
-                        Icon(
-                            Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Назад"
+    SearchScreenBackground {
+        Scaffold(
+            topBar = {
+                TopAppBar(
+                    title = {
+                        TextField(
+                            value = searchText,
+                            onValueChange = {
+                                searchText = it
+                            },
+                            placeholder = { Text("Поиск продуктов...") },
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = TextFieldDefaults.colors(
+                                focusedContainerColor = MaterialTheme.colorScheme.surface,
+                                unfocusedContainerColor = MaterialTheme.colorScheme.surface,
+                                disabledContainerColor = MaterialTheme.colorScheme.surface,
+                                focusedIndicatorColor = Color.Transparent,
+                                unfocusedIndicatorColor = Color.Transparent
+                            ),
+                            leadingIcon = {
+                                Icon(Icons.Default.Search, contentDescription = null)
+                            }
                         )
-                    }
-                }
-            )
-        }
-    ) { paddingValues ->
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
-        ) {
-            when {
-                isLoading && searchResults.isEmpty() -> {
-                    LoadingIndicator()
-                }
-                error != null -> {
-                    Column(
-                        modifier = Modifier
-                            .align(Alignment.Center)
-                            .padding(16.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-                        Text(
-                            text = "❌",
-                            style = Theme.typography.displayMedium
-                        )
-                        Spacer(modifier = Modifier.height(16.dp))
-                        Text(
-                            text = error ?: "Ошибка",
-                            style = Theme.typography.bodyLarge,
-                            color = Theme.colors.error
-                        )
-                        Spacer(modifier = Modifier.height(16.dp))
-                        Button(onClick = { viewModel.retry() }) {
-                            Text("Повторить")
-                        }
-                    }
-                }
-                searchResults.isEmpty() && searchText.isNotBlank() -> {
-                    Column(
-                        modifier = Modifier
-                            .align(Alignment.Center)
-                            .padding(16.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-                        Text(
-                            text = "😕",
-                            style = Theme.typography.displayMedium
-                        )
-                        Spacer(modifier = Modifier.height(16.dp))
-                        Text(
-                            text = "Ничего не найдено",
-                            style = Theme.typography.bodyLarge
-                        )
-                    }
-                }
-                else -> {
-                    LazyColumn(
-                        modifier = Modifier.fillMaxSize(),
-                        contentPadding = PaddingValues(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        items(
-                            items = searchResults,
-                            key = { it.code ?: it.product_name ?: "" }
-                        ) { product ->
-                            ProductSearchItem(
-                                product = product,
-                                onClick = { onProductClick(product) }
+                    },
+                    navigationIcon = {
+                        IconButton(onClick = onBackPressed) {
+                            Icon(
+                                Icons.AutoMirrored.Filled.ArrowBack,
+                                contentDescription = "Назад"
                             )
                         }
+                    }
+                )
+            }
+        ) { paddingValues ->
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(paddingValues)
+            ) {
+                when {
+                    isLoading && searchResults.isEmpty() -> {
+                        LoadingIndicator()
+                    }
+                    error != null -> {
+                        Column(
+                            modifier = Modifier
+                                .align(Alignment.Center)
+                                .padding(16.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Text(
+                                text = "❌",
+                                style = Theme.typography.displayMedium
+                            )
+                            Spacer(modifier = Modifier.height(16.dp))
+                            Text(
+                                text = error ?: "Ошибка",
+                                style = Theme.typography.bodyLarge,
+                                color = Theme.colors.error
+                            )
+                            Spacer(modifier = Modifier.height(16.dp))
+                            Button(onClick = { viewModel.retry() }) {
+                                Text("Повторить")
+                            }
+                        }
+                    }
+                    searchResults.isEmpty() && searchText.isNotBlank() -> {
+                        Column(
+                            modifier = Modifier
+                                .align(Alignment.Center)
+                                .padding(16.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Text(
+                                text = "😕",
+                                style = Theme.typography.displayMedium
+                            )
+                            Spacer(modifier = Modifier.height(16.dp))
+                            Text(
+                                text = "Ничего не найдено",
+                                style = Theme.typography.bodyLarge
+                            )
+                        }
+                    }
+                    else -> {
+                        LazyColumn(
+                            modifier = Modifier.fillMaxSize(),
+                            contentPadding = PaddingValues(16.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            items(
+                                items = searchResults,
+                                key = { it.code ?: it.product_name ?: "" }
+                            ) { product ->
+                                ProductSearchItem(
+                                    product = product,
+                                    onClick = { onProductClick(product) }
+                                )
+                            }
 
-                        if (isLoadingMore && hasMorePages) {
-                            item {
-                                Box(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(16.dp),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    CircularProgressIndicator(
-                                        modifier = Modifier.size(32.dp),
-                                        color = Theme.colors.primary
-                                    )
+                            if (isLoadingMore && hasMorePages) {
+                                item {
+                                    Box(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(16.dp),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        CircularProgressIndicator(
+                                            modifier = Modifier.size(32.dp),
+                                            color = Theme.colors.primary
+                                        )
+                                    }
                                 }
                             }
                         }

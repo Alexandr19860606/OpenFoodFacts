@@ -16,6 +16,7 @@ import com.korelin.openfoodfacts.ui.components.BottomNavigationBar
 import com.korelin.openfoodfacts.ui.screens.favorites.FavoritesScreen
 import com.korelin.openfoodfacts.ui.screens.history.HistoryScreen
 import com.korelin.openfoodfacts.ui.screens.home.HomeScreen
+import com.korelin.openfoodfacts.ui.screens.notifications.NotificationScreen
 import com.korelin.openfoodfacts.ui.screens.product.ProductScreen
 import com.korelin.openfoodfacts.ui.screens.scanner.ScannerScreen
 import com.korelin.openfoodfacts.ui.screens.search.SearchScreen
@@ -167,6 +168,22 @@ fun AppNavigation() {
                     onProductClick = { barcode: String ->
                         FileLogger.d("Nav", "Выбран продукт из избранного: $barcode")
                         navController.navigate("product/$barcode")
+                    }
+                )
+            }
+
+            // 👇 ДОБАВЛЯЕМ ЭКРАН УВЕДОМЛЕНИЙ
+            composable("notifications") {
+                FileLogger.d("Nav", "Открыт экран Notifications")
+                NotificationScreen(
+                    onBackPressed = {
+                        FileLogger.d("Nav", "Назад с Notifications")
+                        navController.popBackStack()
+                    },
+                    onNotificationClick = { notification ->
+                        notification.productCode?.let { productCode ->
+                            navController.navigate("product/$productCode")
+                        }
                     }
                 )
             }

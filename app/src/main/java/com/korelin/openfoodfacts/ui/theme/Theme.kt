@@ -9,21 +9,19 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
+import com.korelin.openfoodfacts.ui.theme.AppTypography
 
 @Composable
 fun OpenFoodFactsTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
-    dynamicColor: Boolean = true,  // Material You на Android 12+
+    dynamicColor: Boolean = true,
     content: @Composable () -> Unit
 ) {
-    // Получаем цветовую схему
     val colorScheme = when {
-        // Динамические цвета из обоев (Android 12+)
         dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
             val context = LocalContext.current
             if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
         }
-        // Статические цвета (если динамические недоступны)
         darkTheme -> darkColorScheme(
             primary = DarkPrimary,
             onPrimary = DarkOnPrimary,
@@ -48,10 +46,7 @@ fun OpenFoodFactsTheme(
             surfaceVariant = DarkSurfaceVariant,
             onSurfaceVariant = DarkOnSurfaceVariant,
             outline = DarkOutline,
-            outlineVariant = DarkOutlineVariant,
-            inverseSurface = DarkInverseSurface,
-            inverseOnSurface = DarkInverseOnSurface,
-            inversePrimary = DarkInversePrimary
+            outlineVariant = DarkOutlineVariant
         )
         else -> lightColorScheme(
             primary = LightPrimary,
@@ -77,20 +72,17 @@ fun OpenFoodFactsTheme(
             surfaceVariant = LightSurfaceVariant,
             onSurfaceVariant = LightOnSurfaceVariant,
             outline = LightOutline,
-            outlineVariant = LightOutlineVariant,
-            inverseSurface = LightInverseSurface,
-            inverseOnSurface = LightInverseOnSurface,
-            inversePrimary = LightInversePrimary
+            outlineVariant = LightOutlineVariant
         )
     }
 
-    // Настройка статус-бара (прозрачный)
+    // Настройка статус-бара (новый способ)
     val view = LocalView.current
     if (!view.isInEditMode) {
         SideEffect {
             val window = (view.context as androidx.activity.ComponentActivity).window
             WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = !darkTheme
-            window.statusBarColor = android.graphics.Color.TRANSPARENT
+            // Убираем устаревший метод установки цвета
         }
     }
 
@@ -102,7 +94,6 @@ fun OpenFoodFactsTheme(
     )
 }
 
-// Вспомогательные функции для доступа к теме
 object Theme {
     val colors: ColorScheme
         @Composable

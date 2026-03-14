@@ -2,12 +2,15 @@ package com.korelin.openfoodfacts.ui.screens.settings
 
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.TrendingUp
+import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -15,9 +18,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.korelin.openfoodfacts.ui.components.SettingsScreenBackground
 import com.korelin.openfoodfacts.ui.theme.Theme
 import kotlinx.coroutines.launch
-import androidx.compose.foundation.clickable
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -48,275 +51,277 @@ fun SettingsScreen(
 
     val actualCacheSize = remember { viewModel.calculateCacheSize() }
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("Настройки") },
-                navigationIcon = {
-                    IconButton(onClick = onBackPressed) {
-                        Icon(
-                            Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Назад"
+    SettingsScreenBackground {
+        Scaffold(
+            topBar = {
+                TopAppBar(
+                    title = { Text("Настройки") },
+                    navigationIcon = {
+                        IconButton(onClick = onBackPressed) {
+                            Icon(
+                                Icons.AutoMirrored.Filled.ArrowBack,
+                                contentDescription = "Назад"
+                            )
+                        }
+                    },
+                    actions = {
+                        IconButton(onClick = { showResetDialog = true }) {
+                            Icon(
+                                Icons.Default.Restore,
+                                contentDescription = "Сбросить настройки"
+                            )
+                        }
+                    }
+                )
+            }
+        ) { paddingValues ->
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(paddingValues),
+                contentPadding = PaddingValues(16.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                // Внешний вид
+                item {
+                    SettingsCategory(
+                        title = "Внешний вид",
+                        icon = Icons.Default.Palette
+                    ) {
+                        // Тема
+                        SettingsRadioGroup(
+                            title = "Тема оформления",
+                            options = listOf("Системная", "Светлая", "Темная"),
+                            selectedIndex = themeMode,
+                            onOptionSelected = { viewModel.setThemeMode(it) }
+                        )
+
+                        HorizontalDivider()
+
+                        // Размер шрифта
+                        SettingsSlider(
+                            title = "Размер шрифта",
+                            value = fontSize,
+                            onValueChange = { viewModel.setFontSize(it) },
+                            valueRange = 0.8f..1.5f,
+                            steps = 7,
+                            valueFormatter = { "${(it * 100).toInt()}%" }
+                        )
+
+                        HorizontalDivider()
+
+                        // Компактный вид
+                        SettingsSwitch(
+                            title = "Компактный вид",
+                            subtitle = "Уменьшить отступы и размеры элементов",
+                            checked = compactView,
+                            onCheckedChange = { viewModel.setCompactView(it) },
+                            icon = Icons.Default.ViewCompact
                         )
                     }
-                },
-                actions = {
-                    IconButton(onClick = { showResetDialog = true }) {
-                        Icon(
-                            Icons.Default.Restore,
-                            contentDescription = "Сбросить настройки"
+                }
+
+                // Язык
+                item {
+                    SettingsCategory(
+                        title = "Язык и регион",
+                        icon = Icons.Default.Language
+                    ) {
+                        SettingsItem(
+                            title = "Язык приложения",
+                            subtitle = getLanguageName(language),
+                            onClick = { showLanguageDialog = true },
+                            icon = Icons.Default.Translate
                         )
                     }
                 }
-            )
-        }
-    ) { paddingValues ->
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues),
-            contentPadding = PaddingValues(16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
-        ) {
-            // Внешний вид
-            item {
-                SettingsCategory(
-                    title = "Внешний вид",
-                    icon = Icons.Default.Palette
-                ) {
-                    // Тема
-                    SettingsRadioGroup(
-                        title = "Тема оформления",
-                        options = listOf("Системная", "Светлая", "Темная"),
-                        selectedIndex = themeMode,
-                        onOptionSelected = { viewModel.setThemeMode(it) }
-                    )
 
-                    HorizontalDivider()
-
-                    // Размер шрифта
-                    SettingsSlider(
-                        title = "Размер шрифта",
-                        value = fontSize,
-                        onValueChange = { viewModel.setFontSize(it) },
-                        valueRange = 0.8f..1.5f,
-                        steps = 7,
-                        valueFormatter = { "${(it * 100).toInt()}%" }
-                    )
-
-                    HorizontalDivider()
-
-                    // Компактный вид
-                    SettingsSwitch(
-                        title = "Компактный вид",
-                        subtitle = "Уменьшить отступы и размеры элементов",
-                        checked = compactView,
-                        onCheckedChange = { viewModel.setCompactView(it) },
-                        icon = Icons.Default.ViewCompact
-                    )
-                }
-            }
-
-            // Язык
-            item {
-                SettingsCategory(
-                    title = "Язык и регион",
-                    icon = Icons.Default.Language
-                ) {
-                    SettingsItem(
-                        title = "Язык приложения",
-                        subtitle = getLanguageName(language),
-                        onClick = { showLanguageDialog = true },
-                        icon = Icons.Default.Translate
-                    )
-                }
-            }
-
-            // Уведомления
-            item {
-                SettingsCategory(
-                    title = "Уведомления",
-                    icon = Icons.Default.Notifications
-                ) {
-                    SettingsSwitch(
-                        title = "Push-уведомления",
-                        subtitle = "Получать уведомления от приложения",
-                        checked = notificationsEnabled,
-                        onCheckedChange = { viewModel.setNotificationsEnabled(it) },
+                // Уведомления
+                item {
+                    SettingsCategory(
+                        title = "Уведомления",
                         icon = Icons.Default.Notifications
-                    )
-
-                    AnimatedVisibility(
-                        visible = notificationsEnabled,
-                        enter = fadeIn() + expandVertically(),
-                        exit = fadeOut() + shrinkVertically()
                     ) {
-                        Column {
-                            HorizontalDivider()
-                            SettingsSwitch(
-                                title = "Звук",
-                                subtitle = "Воспроизводить звук при уведомлении",
-                                checked = soundEnabled,
-                                onCheckedChange = { viewModel.setSoundEnabled(it) },
-                                icon = Icons.Default.VolumeUp
-                            )
-                            SettingsSwitch(
-                                title = "Вибрация",
-                                subtitle = "Вибрировать при уведомлении",
-                                checked = vibrationEnabled,
-                                onCheckedChange = { viewModel.setVibrationEnabled(it) },
-                                icon = Icons.Default.Vibration
-                            )
-                        }
-                    }
-                }
-            }
+                        SettingsSwitch(
+                            title = "Push-уведомления",
+                            subtitle = "Получать уведомления от приложения",
+                            checked = notificationsEnabled,
+                            onCheckedChange = { viewModel.setNotificationsEnabled(it) },
+                            icon = Icons.Default.Notifications
+                        )
 
-            // Главный экран
-            item {
-                SettingsCategory(
-                    title = "Главный экран",
-                    icon = Icons.Default.Home
-                ) {
-                    SettingsSwitch(
-                        title = "Популярные продукты",
-                        subtitle = "Показывать блок популярных продуктов",
-                        checked = showPopular,
-                        onCheckedChange = { viewModel.setShowPopular(it) },
-                        icon = Icons.Default.TrendingUp
-                    )
-
-                    SettingsSwitch(
-                        title = "Новинки",
-                        subtitle = "Показывать блок новинок",
-                        checked = showNew,
-                        onCheckedChange = { viewModel.setShowNew(it) },
-                        icon = Icons.Default.FiberNew
-                    )
-
-                    SettingsSwitch(
-                        title = "Категории",
-                        subtitle = "Показывать блок категорий",
-                        checked = showCategories,
-                        onCheckedChange = { viewModel.setShowCategories(it) },
-                        icon = Icons.Default.Category
-                    )
-                }
-            }
-
-            // Синхронизация и кэш
-            item {
-                SettingsCategory(
-                    title = "Данные и синхронизация",
-                    icon = Icons.Default.Sync
-                ) {
-                    SettingsSwitch(
-                        title = "Автосинхронизация",
-                        subtitle = "Автоматически обновлять данные",
-                        checked = autoSync,
-                        onCheckedChange = { viewModel.setAutoSync(it) },
-                        icon = Icons.Default.Sync
-                    )
-
-                    AnimatedVisibility(
-                        visible = autoSync,
-                        enter = fadeIn() + expandVertically(),
-                        exit = fadeOut() + shrinkVertically()
-                    ) {
-                        Column {
-                            HorizontalDivider()
-                            SettingsItem(
-                                title = "Интервал синхронизации",
-                                subtitle = "Каждые $syncInterval минут",
-                                onClick = { showSyncIntervalDialog = true },
-                                icon = Icons.Default.Timer
-                            )
-                        }
-                    }
-
-                    HorizontalDivider()
-
-                    SettingsItem(
-                        title = "Размер кэша",
-                        subtitle = actualCacheSize,
-                        onClick = { showCacheDialog = true },
-                        icon = Icons.Default.Storage
-                    )
-
-                    SettingsItem(
-                        title = "Очистить кэш",
-                        subtitle = "Освободить место на устройстве",
-                        onClick = {
-                            scope.launch {
-                                viewModel.clearCache()
-                                // Показать Snackbar
+                        AnimatedVisibility(
+                            visible = notificationsEnabled,
+                            enter = fadeIn() + expandVertically(),
+                            exit = fadeOut() + shrinkVertically()
+                        ) {
+                            Column {
+                                HorizontalDivider()
+                                SettingsSwitch(
+                                    title = "Звук",
+                                    subtitle = "Воспроизводить звук при уведомлении",
+                                    checked = soundEnabled,
+                                    onCheckedChange = { viewModel.setSoundEnabled(it) },
+                                    icon = Icons.AutoMirrored.Filled.VolumeUp
+                                )
+                                SettingsSwitch(
+                                    title = "Вибрация",
+                                    subtitle = "Вибрировать при уведомлении",
+                                    checked = vibrationEnabled,
+                                    onCheckedChange = { viewModel.setVibrationEnabled(it) },
+                                    icon = Icons.Default.Vibration
+                                )
                             }
-                        },
-                        icon = Icons.Default.DeleteSweep,
-                        isDestructive = true
-                    )
+                        }
+                    }
                 }
-            }
 
-            // Приватность
-            item {
-                SettingsCategory(
-                    title = "Приватность",
-                    icon = Icons.Default.PrivacyTip
-                ) {
-                    SettingsSwitch(
-                        title = "Аналитика",
-                        subtitle = "Помочь улучшить приложение",
-                        checked = analyticsEnabled,
-                        onCheckedChange = { viewModel.setAnalyticsEnabled(it) },
-                        icon = Icons.Default.Analytics
-                    )
+                // Главный экран
+                item {
+                    SettingsCategory(
+                        title = "Главный экран",
+                        icon = Icons.Default.Home
+                    ) {
+                        SettingsSwitch(
+                            title = "Популярные продукты",
+                            subtitle = "Показывать блок популярных продуктов",
+                            checked = showPopular,
+                            onCheckedChange = { viewModel.setShowPopular(it) },
+                            icon = Icons.AutoMirrored.Filled.TrendingUp
+                        )
+
+                        SettingsSwitch(
+                            title = "Новинки",
+                            subtitle = "Показывать блок новинок",
+                            checked = showNew,
+                            onCheckedChange = { viewModel.setShowNew(it) },
+                            icon = Icons.Default.FiberNew
+                        )
+
+                        SettingsSwitch(
+                            title = "Категории",
+                            subtitle = "Показывать блок категорий",
+                            checked = showCategories,
+                            onCheckedChange = { viewModel.setShowCategories(it) },
+                            icon = Icons.Default.Category
+                        )
+                    }
                 }
-            }
 
-            // О приложении
-            item {
-                SettingsCategory(
-                    title = "О приложении",
-                    icon = Icons.Default.Info
-                ) {
-                    SettingsItem(
-                        title = "Версия",
-                        subtitle = "1.0.0 (Build 1)",
-                        icon = Icons.Default.Info,
-                        onClick = {}
-                    )
+                // Синхронизация и кэш
+                item {
+                    SettingsCategory(
+                        title = "Данные и синхронизация",
+                        icon = Icons.Default.Sync
+                    ) {
+                        SettingsSwitch(
+                            title = "Автосинхронизация",
+                            subtitle = "Автоматически обновлять данные",
+                            checked = autoSync,
+                            onCheckedChange = { viewModel.setAutoSync(it) },
+                            icon = Icons.Default.Sync
+                        )
 
-                    SettingsItem(
-                        title = "Политика конфиденциальности",
-                        icon = Icons.Default.PrivacyTip,
-                        onClick = {}
-                    )
+                        AnimatedVisibility(
+                            visible = autoSync,
+                            enter = fadeIn() + expandVertically(),
+                            exit = fadeOut() + shrinkVertically()
+                        ) {
+                            Column {
+                                HorizontalDivider()
+                                SettingsItem(
+                                    title = "Интервал синхронизации",
+                                    subtitle = "Каждые $syncInterval минут",
+                                    onClick = { showSyncIntervalDialog = true },
+                                    icon = Icons.Default.Timer
+                                )
+                            }
+                        }
 
-                    SettingsItem(
-                        title = "Условия использования",
-                        icon = Icons.Default.Gavel,
-                        onClick = {}
-                    )
+                        HorizontalDivider()
 
-                    SettingsItem(
-                        title = "Открытый исходный код",
-                        subtitle = "github.com/...",
-                        icon = Icons.Default.Code,
-                        onClick = {}
-                    )
+                        SettingsItem(
+                            title = "Размер кэша",
+                            subtitle = actualCacheSize,
+                            onClick = { showCacheDialog = true },
+                            icon = Icons.Default.Storage
+                        )
 
-                    SettingsItem(
-                        title = "Оценить приложение",
-                        icon = Icons.Default.Star,
-                        onClick = {}
-                    )
+                        SettingsItem(
+                            title = "Очистить кэш",
+                            subtitle = "Освободить место на устройстве",
+                            onClick = {
+                                scope.launch {
+                                    viewModel.clearCache()
+                                    // Показать Snackbar
+                                }
+                            },
+                            icon = Icons.Default.DeleteSweep,
+                            isDestructive = true
+                        )
+                    }
+                }
 
-                    SettingsItem(
-                        title = "Сообщить об ошибке",
-                        icon = Icons.Default.BugReport,
-                        onClick = {}
-                    )
+                // Приватность
+                item {
+                    SettingsCategory(
+                        title = "Приватность",
+                        icon = Icons.Default.PrivacyTip
+                    ) {
+                        SettingsSwitch(
+                            title = "Аналитика",
+                            subtitle = "Помочь улучшить приложение",
+                            checked = analyticsEnabled,
+                            onCheckedChange = { viewModel.setAnalyticsEnabled(it) },
+                            icon = Icons.Default.Analytics
+                        )
+                    }
+                }
+
+                // О приложении
+                item {
+                    SettingsCategory(
+                        title = "О приложении",
+                        icon = Icons.Default.Info
+                    ) {
+                        SettingsItem(
+                            title = "Версия",
+                            subtitle = "1.0.0 (Build 1)",
+                            icon = Icons.Default.Info,
+                            onClick = {}
+                        )
+
+                        SettingsItem(
+                            title = "Политика конфиденциальности",
+                            icon = Icons.Default.PrivacyTip,
+                            onClick = {}
+                        )
+
+                        SettingsItem(
+                            title = "Условия использования",
+                            icon = Icons.Default.Gavel,
+                            onClick = {}
+                        )
+
+                        SettingsItem(
+                            title = "Открытый исходный код",
+                            subtitle = "github.com/...",
+                            icon = Icons.Default.Code,
+                            onClick = {}
+                        )
+
+                        SettingsItem(
+                            title = "Оценить приложение",
+                            icon = Icons.Default.Star,
+                            onClick = {}
+                        )
+
+                        SettingsItem(
+                            title = "Сообщить об ошибке",
+                            icon = Icons.Default.BugReport,
+                            onClick = {}
+                        )
+                    }
                 }
             }
         }

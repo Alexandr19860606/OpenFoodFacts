@@ -146,7 +146,6 @@ class ProductRepository @Inject constructor() {
             response.products ?: emptyList()
         }
     } catch (e: Exception) {
-        e.printStackTrace()
         mockNewProducts.shuffled().take(3)
     }
 

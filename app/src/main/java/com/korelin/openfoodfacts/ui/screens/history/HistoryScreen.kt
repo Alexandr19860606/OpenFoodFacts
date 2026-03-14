@@ -10,6 +10,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.korelin.openfoodfacts.ui.components.HistoryScreenBackground
 import com.korelin.openfoodfacts.ui.theme.CustomShapes
 import com.korelin.openfoodfacts.ui.theme.Theme
 
@@ -21,7 +22,6 @@ fun HistoryScreen(
 ) {
     var searchQuery by remember { mutableStateOf("") }
 
-    // Заглушка для истории
     val historyItems = remember {
         listOf(
             Triple("3017620422003", "Nutella", "17:30"),
@@ -32,52 +32,52 @@ fun HistoryScreen(
         )
     }
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("История") },
-                navigationIcon = {
-                    IconButton(onClick = onBackPressed) {
-                        Icon(
-                            Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Назад"
+    HistoryScreenBackground {
+        Scaffold(
+            topBar = {
+                TopAppBar(
+                    title = { Text("История") },
+                    navigationIcon = {
+                        IconButton(onClick = onBackPressed) {
+                            Icon(
+                                Icons.AutoMirrored.Filled.ArrowBack,
+                                contentDescription = "Назад"
+                            )
+                        }
+                    }
+                )
+            }
+        ) { paddingValues ->
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(paddingValues)
+            ) {
+                OutlinedTextField(
+                    value = searchQuery,
+                    onValueChange = { searchQuery = it },
+                    label = { Text("Поиск по истории") },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    singleLine = true
+                )
+
+                LazyColumn(
+                    modifier = Modifier.weight(1f),
+                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    items(historyItems) { (barcode, name, time) ->
+                        HistoryItem(
+                            name = name,
+                            barcode = barcode,
+                            time = time,
+                            onClick = {
+                                onProductClick(barcode)
+                            }
                         )
                     }
-                }
-            )
-        }
-    ) { paddingValues ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
-        ) {
-            // Поле поиска
-            OutlinedTextField(
-                value = searchQuery,
-                onValueChange = { searchQuery = it },
-                label = { Text("Поиск по истории") },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp),
-                singleLine = true
-            )
-
-            // Список истории
-            LazyColumn(
-                modifier = Modifier.weight(1f),
-                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                items(historyItems) { (barcode, name, time) ->
-                    HistoryItem(
-                        name = name,
-                        barcode = barcode,
-                        time = time,
-                        onClick = {
-                            onProductClick(barcode)
-                        }
-                    )
                 }
             }
         }

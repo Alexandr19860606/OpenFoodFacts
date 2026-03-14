@@ -6,7 +6,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -15,7 +14,6 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -30,7 +28,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
@@ -38,6 +35,7 @@ import com.google.accompanist.permissions.*
 import com.korelin.openfoodfacts.data.model.ProductInfo
 import com.korelin.openfoodfacts.data.model.Nutriments
 import com.korelin.openfoodfacts.ui.components.LoadingIndicator
+import com.korelin.openfoodfacts.ui.components.ProductScreenBackground
 import com.korelin.openfoodfacts.ui.theme.Theme
 import com.korelin.openfoodfacts.utils.*
 
@@ -65,10 +63,6 @@ fun ProductScreen(
         android.Manifest.permission.WRITE_CALENDAR
     )
 
-    // Состояние для диалогов
-    var showPermissionDialog by rememberSaveable { mutableStateOf(false) }
-    var pendingAction by rememberSaveable { mutableStateOf<(() -> Unit)?>(null) }
-
     // Анимации
     val fabScale by animateFloatAsState(
         targetValue = if (isScrolling.value) 0.8f else 1f,
@@ -91,132 +85,134 @@ fun ProductScreen(
         product ?: ProductInfo(code = barcode)
     }
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = {
-                    AnimatedContent(
-                        targetState = safeProduct.product_name ?: "Детали продукта",
-                        transitionSpec = {
-                            fadeIn() togetherWith fadeOut()
-                        },
-                        label = "title_animation"
-                    ) { title ->
-                        Text(
-                            text = title,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                            style = MaterialTheme.typography.titleLarge
-                        )
-                    }
-                },
-                navigationIcon = {
-                    IconButton(onClick = onBackPressed) {
-                        Icon(
-                            Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Назад"
-                        )
-                    }
-                },
-                actions = {
-                    AnimatedVisibility(
-                        visible = !isScrolling.value && product != null,
-                        enter = fadeIn() + scaleIn(),
-                        exit = fadeOut() + scaleOut()
-                    ) {
-                        Row {
-                            IconButton(onClick = { viewModel.toggleFavorite() }) {
-                                Icon(
-                                    if (isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
-                                    contentDescription = if (isFavorite) "Удалить из избранного" else "Добавить в избранное",
-                                    tint = if (isFavorite) Theme.colors.primary else Theme.colors.onSurfaceVariant
-                                )
-                            }
-                        }
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = Theme.colors.surface.copy(alpha = if (isScrolling.value) 0.9f else 1f)
-                )
-            )
-        },
-        floatingActionButton = {
-            AnimatedVisibility(
-                visible = product != null,
-                enter = fadeIn() + scaleIn(),
-                exit = fadeOut() + scaleOut()
-            ) {
-                FloatingActionButton(
-                    onClick = {
-                        product?.let {
-                            ShareHelper.shareProduct(context, it)
+    ProductScreenBackground {
+        Scaffold(
+            topBar = {
+                TopAppBar(
+                    title = {
+                        AnimatedContent(
+                            targetState = safeProduct.product_name ?: "Детали продукта",
+                            transitionSpec = {
+                                fadeIn() togetherWith fadeOut()
+                            },
+                            label = "title_animation"
+                        ) { title ->
+                            Text(
+                                text = title,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                                style = MaterialTheme.typography.titleLarge
+                            )
                         }
                     },
-                    modifier = Modifier
-                        .scale(fabScale)
-                        .graphicsLayer(alpha = fabAlpha),
-                    shape = CircleShape,
-                    containerColor = Theme.colors.primary
-                ) {
-                    Icon(
-                        Icons.Default.Share,
-                        contentDescription = "Поделиться",
-                        tint = Theme.colors.onPrimary
-                    )
-                }
-            }
-        }
-    ) { paddingValues ->
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
-        ) {
-            when {
-                isLoading && product == null -> {
-                    LoadingIndicator()
-                }
-                error != null && product == null -> {
-                    ErrorContent(
-                        error = error!!,
-                        onRetry = { viewModel.retry() },
-                        onBack = onBackPressed
-                    )
-                }
-                else -> {
-                    ProductDetailContent(
-                        product = safeProduct,
-                        isLoading = isLoading,
-                        isFavorite = isFavorite,
-                        onFavoriteClick = { viewModel.toggleFavorite() },
-                        onShareClick = {
-                            product?.let { ShareHelper.shareProduct(context, it) }
-                        },
-                        onDownloadImage = {
-                            if (storagePermissionState.status.isGranted) {
-                                product?.getBestImageUrl()?.let { imageUrl ->
-                                    ImageDownloader.downloadImageWithCoil(
-                                        context,
-                                        imageUrl,
-                                        product?.product_name ?: "product_${product?.code}"
+                    navigationIcon = {
+                        IconButton(onClick = onBackPressed) {
+                            Icon(
+                                Icons.AutoMirrored.Filled.ArrowBack,
+                                contentDescription = "Назад"
+                            )
+                        }
+                    },
+                    actions = {
+                        AnimatedVisibility(
+                            visible = !isScrolling.value && product != null,
+                            enter = fadeIn() + scaleIn(),
+                            exit = fadeOut() + scaleOut()
+                        ) {
+                            Row {
+                                IconButton(onClick = { viewModel.toggleFavorite() }) {
+                                    Icon(
+                                        if (isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
+                                        contentDescription = if (isFavorite) "Удалить из избранного" else "Добавить в избранное",
+                                        tint = if (isFavorite) Theme.colors.primary else Theme.colors.onSurfaceVariant
                                     )
                                 }
-                            } else {
-                                storagePermissionState.launchPermissionRequest()
-                            }
-                        },
-                        onAddToCalendar = {
-                            if (calendarPermissionState.status.isGranted) {
-                                CalendarHelper.addProductToCalendar(
-                                    context,
-                                    product?.product_name,
-                                    product?.code ?: ""
-                                )
-                            } else {
-                                calendarPermissionState.launchPermissionRequest()
                             }
                         }
+                    },
+                    colors = TopAppBarDefaults.topAppBarColors(
+                        containerColor = Theme.colors.surface.copy(alpha = if (isScrolling.value) 0.9f else 1f)
                     )
+                )
+            },
+            floatingActionButton = {
+                AnimatedVisibility(
+                    visible = product != null,
+                    enter = fadeIn() + scaleIn(),
+                    exit = fadeOut() + scaleOut()
+                ) {
+                    FloatingActionButton(
+                        onClick = {
+                            product?.let {
+                                ShareHelper.shareProduct(context, it)
+                            }
+                        },
+                        modifier = Modifier
+                            .scale(fabScale)
+                            .graphicsLayer(alpha = fabAlpha),
+                        shape = CircleShape,
+                        containerColor = Theme.colors.primary
+                    ) {
+                        Icon(
+                            Icons.Default.Share,
+                            contentDescription = "Поделиться",
+                            tint = Theme.colors.onPrimary
+                        )
+                    }
+                }
+            }
+        ) { paddingValues ->
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(paddingValues)
+            ) {
+                when {
+                    isLoading && product == null -> {
+                        LoadingIndicator()
+                    }
+                    error != null && product == null -> {
+                        ErrorContent(
+                            error = error!!,
+                            onRetry = { viewModel.retry() },
+                            onBack = onBackPressed
+                        )
+                    }
+                    else -> {
+                        ProductDetailContent(
+                            product = safeProduct,
+                            isLoading = isLoading,
+                            isFavorite = isFavorite,
+                            onFavoriteClick = { viewModel.toggleFavorite() },
+                            onShareClick = {
+                                product?.let { ShareHelper.shareProduct(context, it) }
+                            },
+                            onDownloadImage = {
+                                if (storagePermissionState.status.isGranted) {
+                                    product?.getBestImageUrl()?.let { imageUrl ->
+                                        ImageDownloader.downloadImageWithCoil(
+                                            context,
+                                            imageUrl,
+                                            product?.product_name ?: "product_${product?.code}"
+                                        )
+                                    }
+                                } else {
+                                    storagePermissionState.launchPermissionRequest()
+                                }
+                            },
+                            onAddToCalendar = {
+                                if (calendarPermissionState.status.isGranted) {
+                                    CalendarHelper.addProductToCalendar(
+                                        context,
+                                        product?.product_name,
+                                        product?.code ?: ""
+                                    )
+                                } else {
+                                    calendarPermissionState.launchPermissionRequest()
+                                }
+                            }
+                        )
+                    }
                 }
             }
         }
@@ -252,28 +248,33 @@ fun ProductDetailContent(
             )
         }
 
-        if (product.nutriments != null) {
+        // Пищевая ценность
+        product.nutriments?.let { nutriments ->
             item {
-                NutritionSection(nutriments = product.nutriments!!)
+                NutritionSection(nutriments = nutriments)
             }
         }
 
+        // Состав
         if (!product.ingredients_text.isNullOrBlank()) {
             item {
-                IngredientsSection(ingredientsText = product.ingredients_text!!)
+                IngredientsSection(ingredientsText = product.ingredients_text)
             }
         }
 
+        // Аллергены
         if (product.getAllergensList().isNotEmpty()) {
             item {
                 AllergensSection(allergens = product.getAllergensList())
             }
         }
 
+        // Дополнительная информация
         item {
             AdditionalInfoSection(product = product)
         }
 
+        // Кнопки действий
         item {
             ActionButtonsRow(
                 onShareClick = onShareClick,

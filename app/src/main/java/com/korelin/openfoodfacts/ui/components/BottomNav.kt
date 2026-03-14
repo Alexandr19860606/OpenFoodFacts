@@ -41,19 +41,18 @@ val bottomNavItems = listOf(
         unselectedIcon = AppIcons.FavoritesOutlined
     ),
     BottomNavItem(
-        route = "settings",
-        title = "Настройки",
-        selectedIcon = AppIcons.Settings,
-        unselectedIcon = AppIcons.SettingsOutlined
-    ),
-    BottomNavItem(
         route = "notifications",
         title = "Уведомления",
         selectedIcon = Icons.Default.Notifications,
         unselectedIcon = Icons.Default.NotificationsNone
+    ),
+    BottomNavItem(
+        route = "settings",
+        title = "Настройки",
+        selectedIcon = AppIcons.Settings,
+        unselectedIcon = AppIcons.SettingsOutlined
     )
 )
-
 @Composable
 fun BottomNavigationBar(
     navController: NavController,

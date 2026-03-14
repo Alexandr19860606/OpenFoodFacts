@@ -1,35 +1,49 @@
 package com.korelin.openfoodfacts
 
 import android.app.Application
-import android.util.Log
-import com.facebook.stetho.BuildConfig
-import com.facebook.stetho.Stetho
 import com.korelin.openfoodfacts.data.api.RetrofitClient
+import com.korelin.openfoodfacts.utils.DebugTree
+import com.korelin.openfoodfacts.utils.FileLogger
+import com.korelin.openfoodfacts.utils.ReleaseTree
 import dagger.hilt.android.HiltAndroidApp
-
+import timber.log.Timber
 
 @HiltAndroidApp
 class OpenFoodFactsApp : Application() {
 
+    companion object {
+        // Свой флаг для отладки
+        private const val DEBUG = true // Меняйте вручную для релиза
+    }
+
     override fun onCreate() {
         super.onCreate()
 
-        // Инициализация Stetho для отладки (только debug)
-        if (BuildConfig.DEBUG) {
-            Stetho.initializeWithDefaults(this)
+        if (DEBUG) {
+            Timber.plant(DebugTree())
+            Timber.d("🚀 Приложение запущено в DEBUG режиме")
+            tryInitializeStetho()
+        } else {
+            Timber.plant(ReleaseTree())
         }
-
-        Log.d(TAG, "🚀 Приложение запущено")
 
         try {
             RetrofitClient.testConnection()
-            Log.d(TAG, "✅ RetrofitClient работает")
+            Timber.d("✅ RetrofitClient работает")
         } catch (e: Exception) {
-            Log.e(TAG, "❌ Ошибка RetrofitClient", e)
+            Timber.e(e, "❌ Ошибка RetrofitClient")
         }
     }
 
-    companion object {
-        private const val TAG = "OpenFoodFactsApp"
+    private fun tryInitializeStetho() {
+        try {
+            val stethoClass = Class.forName("com.facebook.stetho.Stetho")
+            val initMethod = stethoClass.getMethod("initializeWithDefaults", android.content.Context::class.java)
+            initMethod.invoke(null, this)
+        } catch (e: ClassNotFoundException) {
+            // Stetho не подключен - игнорируем
+        } catch (e: Exception) {
+            Timber.e(e, "Ошибка Stetho")
+        }
     }
 }

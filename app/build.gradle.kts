@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
@@ -9,25 +11,65 @@ plugins {
 
 android {
     namespace = "com.korelin.openfoodfacts"
-    compileSdk = 34
+    compileSdk = 35
 
     defaultConfig {
         applicationId = "com.korelin.openfoodfacts"
         minSdk = 24
-        targetSdk = 34
+        targetSdk = 35
         versionCode = 1
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
+    signingConfigs {
+        create("release") {
+            val keystorePropertiesFile = rootProject.file("keystore.properties")
+            val keystoreProperties = Properties()
+
+            if (keystorePropertiesFile.exists()) {
+                keystoreProperties.load(keystorePropertiesFile.inputStream())
+
+                keyAlias = keystoreProperties.getProperty("keyAlias")
+                keyPassword = keystoreProperties.getProperty("keyPassword")
+                storeFile = file(keystoreProperties.getProperty("storeFile"))
+                storePassword = keystoreProperties.getProperty("storePassword")
+            } else {
+                // Fallback для CI/CD
+                keyAlias = System.getenv("KEY_ALIAS") ?: ""
+                keyPassword = System.getenv("KEY_PASSWORD") ?: ""
+                storeFile = file(System.getenv("STORE_FILE") ?: "keystore.jks")
+                storePassword = System.getenv("STORE_PASSWORD") ?: ""
+            }
+        }
+    }
+
     buildTypes {
         release {
-            isMinifyEnabled = false
+            isMinifyEnabled = true
+            isShrinkResources = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+            signingConfig = signingConfigs.getByName("release")
+        }
+
+        debug {
+            isMinifyEnabled = false
+            applicationIdSuffix = ".debug"
+            versionNameSuffix = "-debug"
+        }
+    }
+
+    kapt {
+        correctErrorTypes = true
+        arguments {
+            arg("dagger.hilt.android.internal.disableAndroidSuperclassValidation", "true")
+            arg("dagger.hilt.internal.useAggregatingRootProcessor", "true")
+            arg("dagger.fastInit", "enabled")
+            arg("dagger.hilt.android.internal.projectType", "true")
         }
     }
 
@@ -36,7 +78,7 @@ android {
     }
 
     composeOptions {
-        kotlinCompilerExtensionVersion = "1.5.14"  // Совместим с Kotlin 1.9.22
+        kotlinCompilerExtensionVersion = "1.5.14"
     }
 
     compileOptions {
@@ -55,7 +97,7 @@ dependencies {
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.7.0")
     implementation("androidx.activity:activity-compose:1.8.2")
 
-    // Compose BOM (только один раз!)
+    // Compose BOM
     implementation(platform("androidx.compose:compose-bom:2024.09.00"))
     androidTestImplementation(platform("androidx.compose:compose-bom:2024.09.00"))
 
@@ -70,7 +112,7 @@ dependencies {
     // Icons
     implementation("androidx.compose.material:material-icons-extended")
 
-    // Foundation (для скролл-баров и т.д.)
+    // Foundation
     implementation("androidx.compose.foundation:foundation")
 
     // Navigation
@@ -83,16 +125,14 @@ dependencies {
     debugImplementation("androidx.compose.ui:ui-tooling")
     debugImplementation("androidx.compose.ui:ui-test-manifest")
 
-    // Coil для загрузки изображений
+    // Coil
     implementation("io.coil-kt:coil-compose:2.5.0")
-    implementation("io.coil-kt:coil-gif:2.5.0") // Для GIF
+    implementation("io.coil-kt:coil-gif:2.5.0")
 
     // Retrofit
     implementation("com.squareup.retrofit2:retrofit:2.9.0")
     implementation("com.squareup.retrofit2:converter-gson:2.9.0")
     implementation("com.squareup.okhttp3:logging-interceptor:4.12.0")
-
-    // Brotli
     implementation("com.squareup.okhttp3:okhttp-brotli:4.12.0")
 
     // Coroutines
@@ -124,7 +164,7 @@ dependencies {
     implementation("com.google.firebase:firebase-messaging:23.4.0")
     implementation("com.google.firebase:firebase-analytics:21.5.0")
 
-    // Accompanist для permissions
+    // Accompanist
     implementation("com.google.accompanist:accompanist-permissions:0.34.0")
 
     // Material Components
@@ -139,6 +179,9 @@ dependencies {
     // AppCompat
     implementation("androidx.appcompat:appcompat:1.6.1")
 
+    // Timber для логирования
+    implementation("com.jakewharton.timber:timber:5.0.1")
+
     // LeakCanary (только debug)
     debugImplementation("com.squareup.leakcanary:leakcanary-android:2.12")
 
@@ -146,18 +189,15 @@ dependencies {
     debugImplementation("com.facebook.stetho:stetho:1.6.0")
     debugImplementation("com.facebook.stetho:stetho-okhttp3:1.6.0")
 
-    // ===== TESTING DEPENDENCIES =====
-    // Unit tests
+    // Testing
     testImplementation("junit:junit:4.13.2")
-
-    // Android tests
     androidTestImplementation("androidx.test.ext:junit:1.1.5")
     androidTestImplementation("androidx.test.espresso:espresso-core:3.5.1")
     androidTestImplementation("androidx.navigation:navigation-testing:2.7.7")
-
-    // Compose testing (версии из BOM)
     androidTestImplementation("androidx.compose.ui:ui-test-junit4")
-    // ================================
+
+    implementation("androidx.media:media:1.7.0")
+    implementation("androidx.core:core-ktx:1.15.0")
 }
 
 kapt {

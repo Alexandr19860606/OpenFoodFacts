@@ -19,6 +19,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.korelin.openfoodfacts.data.local.entity.NotificationEntity
 import com.korelin.openfoodfacts.data.local.entity.NotificationType
 import com.korelin.openfoodfacts.ui.components.LoadingIndicator
+import com.korelin.openfoodfacts.ui.components.NotificationsScreenBackground
 import com.korelin.openfoodfacts.ui.theme.Theme
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -48,87 +49,89 @@ fun NotificationScreen(
         }
     }
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text("Уведомления")
+    NotificationsScreenBackground {
+        Scaffold(
+            topBar = {
+                TopAppBar(
+                    title = {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text("Уведомления")
+                            if (unreadCount > 0) {
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Badge(
+                                    containerColor = Theme.colors.primary
+                                ) {
+                                    Text(
+                                        text = unreadCount.toString(),
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = Theme.colors.onPrimary
+                                    )
+                                }
+                            }
+                        }
+                    },
+                    navigationIcon = {
+                        IconButton(onClick = onBackPressed) {
+                            Icon(
+                                Icons.AutoMirrored.Filled.ArrowBack,
+                                contentDescription = "Назад"
+                            )
+                        }
+                    },
+                    actions = {
+                        // Кнопка фильтра
+                        IconButton(onClick = { showFilterMenu = true }) {
+                            Icon(
+                                Icons.Default.FilterList,
+                                contentDescription = "Фильтр"
+                            )
+                        }
+
+                        // Кнопка отметить все как прочитанные
                         if (unreadCount > 0) {
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Badge(
-                                containerColor = Theme.colors.primary
-                            ) {
-                                Text(
-                                    text = unreadCount.toString(),
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = Theme.colors.onPrimary
+                            IconButton(onClick = { viewModel.markAllAsRead() }) {
+                                Icon(
+                                    Icons.Default.DoneAll,
+                                    contentDescription = "Отметить все"
                                 )
                             }
                         }
-                    }
-                },
-                navigationIcon = {
-                    IconButton(onClick = onBackPressed) {
-                        Icon(
-                            Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Назад"
-                        )
-                    }
-                },
-                actions = {
-                    // Кнопка фильтра
-                    IconButton(onClick = { showFilterMenu = true }) {
-                        Icon(
-                            Icons.Default.FilterList,
-                            contentDescription = "Фильтр"
-                        )
-                    }
 
-                    // Кнопка отметить все как прочитанные
-                    if (unreadCount > 0) {
-                        IconButton(onClick = { viewModel.markAllAsRead() }) {
+                        // Кнопка очистить
+                        IconButton(onClick = { showClearDialog = true }) {
                             Icon(
-                                Icons.Default.DoneAll,
-                                contentDescription = "Отметить все"
+                                Icons.Default.DeleteSweep,
+                                contentDescription = "Очистить"
                             )
                         }
                     }
-
-                    // Кнопка очистить
-                    IconButton(onClick = { showClearDialog = true }) {
-                        Icon(
-                            Icons.Default.DeleteSweep,
-                            contentDescription = "Очистить"
-                        )
-                    }
-                }
-            )
-        }
-    ) { paddingValues ->
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
-        ) {
-            if (isLoading) {
-                LoadingIndicator()
-            } else if (filteredNotifications.isEmpty()) {
-                EmptyNotificationsContent()
-            } else {
-                NotificationList(
-                    notifications = filteredNotifications,
-                    onNotificationClick = { notification ->
-                        viewModel.markAsRead(notification)
-                        onNotificationClick(notification)
-                    },
-                    onDeleteClick = { notification ->
-                        viewModel.deleteNotification(notification)
-                    },
-                    onToggleEnabled = { notification ->
-                        viewModel.toggleNotificationEnabled(notification)
-                    }
                 )
+            }
+        ) { paddingValues ->
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(paddingValues)
+            ) {
+                if (isLoading) {
+                    LoadingIndicator()
+                } else if (filteredNotifications.isEmpty()) {
+                    EmptyNotificationsContent()
+                } else {
+                    NotificationList(
+                        notifications = filteredNotifications,
+                        onNotificationClick = { notification ->
+                            viewModel.markAsRead(notification)
+                            onNotificationClick(notification)
+                        },
+                        onDeleteClick = { notification ->
+                            viewModel.deleteNotification(notification)
+                        },
+                        onToggleEnabled = { notification ->
+                            viewModel.toggleNotificationEnabled(notification)
+                        }
+                    )
+                }
             }
         }
     }
