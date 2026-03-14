@@ -1,5 +1,8 @@
 package com.korelin.openfoodfacts.ui.components
 
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Notifications
+import androidx.compose.material.icons.filled.NotificationsNone
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -38,13 +41,18 @@ val bottomNavItems = listOf(
         unselectedIcon = AppIcons.FavoritesOutlined
     ),
     BottomNavItem(
+        route = "notifications",
+        title = "Уведомления",
+        selectedIcon = Icons.Default.Notifications,
+        unselectedIcon = Icons.Default.NotificationsNone
+    ),
+    BottomNavItem(
         route = "settings",
         title = "Настройки",
         selectedIcon = AppIcons.Settings,
         unselectedIcon = AppIcons.SettingsOutlined
     )
 )
-
 @Composable
 fun BottomNavigationBar(
     navController: NavController,
